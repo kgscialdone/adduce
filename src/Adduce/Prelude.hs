@@ -31,6 +31,7 @@ defaultEnv = Env {
     ("Print", VIOFn B.print),
     ("Stack", VIOFn (\s -> do print . fst $ s; return s)),
     ("PrEnv", VIOFn (\s -> do print . snd $ s; return s)),
+    ("PrTyp", VIOFn (\(x:xs,e) -> do putStrLn . typeName $ x; return (x:xs,e))),
 
     ("Do",    VIOFn B.doo),
     ("If",    VFunc B.iff),
