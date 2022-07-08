@@ -24,21 +24,37 @@ parseString str =
 tokenize :: String -> [Either Token String]
 tokenize = tokenize'
   where
-    tokenEnd c = isSpace c || elem c " ,.()"
+    tokenEnd c = isSpace c || elem c ",.()"
 
     tokenize' :: String -> [Either Token String]
-    tokenize' (';':cs)  = []
-    tokenize' ('\"':cs) = takeQuoted '\"' cs
-    tokenize' ('\'':cs) = takeQuoted '\'' cs
+    tokenize' (';':cs)   = []
+    tokenize' ('\"':cs)  = takeQuoted '\"' cs
+    tokenize' ('\'':cs)  = takeQuoted '\'' cs
+    tokenize' ('-':c:cs)
+      | isDigit c = takeNumber "-" (c:cs)
+      | otherwise = takeUntil tokenEnd ('-':c:cs)
     tokenize' (c:cs)
       | isSpace c || c == ',' = tokenize' cs
       | isLower c             = skipUntil tokenEnd cs
+      | isDigit c             = takeNumber "" (c:cs)
       | c `elem` ".()"        = Right [c] : tokenize' cs
       | otherwise             = takeUntil tokenEnd (c:cs)
     tokenize' "" = []
 
     takeUntil pred cs = Right (takeWhile (not . pred) cs) : skipUntil pred cs
     skipUntil pred cs = tokenize' $ dropWhile (not . pred) cs
+
+    takeNumber :: String -> String -> [Either Token String]
+    takeNumber acc ('.':c:cs)
+      | '.' `elem` acc && isDigit c = Left (Invalid $ "Invalid numeric literal `"++acc++['.',c]++"`") : tokenize' cs
+      | '.' `elem` acc              = Right acc : tokenize' ('.':c:cs)
+      | isDigit c                   = takeNumber (acc ++ ['.',c]) cs
+      | otherwise                   = Right acc : tokenize' ('.':c:cs)
+    takeNumber acc (c:cs)
+      | tokenEnd c                  = Right acc : tokenize' (c:cs)
+      | isDigit c                   = takeNumber (acc ++ [c]) cs
+      | otherwise                   = Left (Invalid $ "Invalid numeric literal `"++acc++[c]++"`") : tokenize' cs
+    takeNumber acc []               = [Right acc]
 
     takeQuoted :: Char -> String -> [Either Token String]
     takeQuoted q cs = case rest of
@@ -96,7 +112,7 @@ parse = parse' ~> groupBy groupStatements ~> map (filter filterEnds) ~> filter (
       | isJust (readMaybe t :: Maybe Integer) = IntLit (read t :: Integer) : parse'' ts
       | isJust (readMaybe t :: Maybe Double)  = FltLit (read t :: Double)  : parse'' ts
       | otherwise                             = Ident t : parse'' ts
-    parse'' []                               = []
+    parse'' []                                = []
 
     consumeParens ts = span (fst ~> (> 0)) $ zip (getNestDepth ts) ts
     getNestDepth = scanl (\acc v -> acc + case v of "(" -> 1; ")" -> -1; _ -> 0) 1
