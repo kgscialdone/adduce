@@ -46,15 +46,24 @@ tokenize = tokenize'
 
     takeNumber :: String -> String -> [Either Token String]
     takeNumber acc ('.':c:cs)
-      | '.' `elem` acc && isDigit c = Left (Invalid $ "Invalid numeric literal `"++acc++['.',c]++"`") : tokenize' cs
+      | '.' `elem` acc && isDigit c = invalidNumber (acc ++ ['.', c]) cs
       | '.' `elem` acc              = Right acc : tokenize' ('.':c:cs)
+      | 'e' `elem` acc              = invalidNumber (acc ++ ['e', c]) cs
       | isDigit c                   = takeNumber (acc ++ ['.',c]) cs
       | otherwise                   = Right acc : tokenize' ('.':c:cs)
+    takeNumber acc ('E':c:cs)       = takeNumber acc ('e':c:cs)
+    takeNumber acc ('e':c:cs)
+      | 'e' `elem` acc              = invalidNumber (acc ++ ['e', c]) cs
+      | isDigit c                   = takeNumber (acc ++ ['e', c]) cs
+      | otherwise                   = invalidNumber (acc ++ "e") cs
     takeNumber acc (c:cs)
       | tokenEnd c                  = Right acc : tokenize' (c:cs)
       | isDigit c                   = takeNumber (acc ++ [c]) cs
-      | otherwise                   = Left (Invalid $ "Invalid numeric literal `"++acc++[c]++"`") : tokenize' cs
+      | otherwise                   = invalidNumber (acc ++ [c]) cs
     takeNumber acc []               = [Right acc]
+
+    invalidNumber acc cs =
+      Left (Invalid $ "Invalid numeric literal `"++trim acc++takeWhile isDigit cs++"`") : skipUntil (not . isDigit) cs
 
     takeQuoted :: Char -> String -> [Either Token String]
     takeQuoted q cs = case rest of

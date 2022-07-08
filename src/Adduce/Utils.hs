@@ -3,6 +3,8 @@
 module Adduce.Utils where
 
 import Control.Monad (foldM)
+import Data.Char (isSpace)
+import Data.List (dropWhileEnd)
 import Data.Map as Map (Map, insert, lookup, toList)
 import Data.Bifunctor (Bifunctor, bimap)
 
@@ -30,4 +32,8 @@ foldPartialIO f = foldM (\b a -> fromEither `fmap` f b a)
 -- | Specialized version of `Data.Bifunctor.bimap` for applying the same function to both arguments.
 bimapBoth :: Bifunctor p => (a -> b) -> p a a -> p b b
 bimapBoth f = bimap f f
+
+-- | Trim whitespace from both ends of a string.
+trim :: String -> String
+trim = dropWhileEnd isSpace . dropWhile isSpace
 
