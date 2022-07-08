@@ -1,0 +1,27 @@
+cabal-version: 2.4
+name:          adduce
+version:       0.1.0.0
+
+synopsis:   The interpreter for the Adduce programming language.
+license:    MPL-2.0
+author:     Katrina Scialdone
+maintainer: kat@swordglowsblue.com
+
+data-files: src/prelude.adc
+
+executable adduce
+    default-language: Haskell2010
+    build-depends:    base ^>=4.15.1.0, containers
+    hs-source-dirs:   src
+    main-is:          Main.hs
+    autogen-modules:  Paths_adduce
+    other-modules:
+        Adduce.Interpreter
+        Adduce.Builtins
+        Adduce.Parser
+        Adduce.Prelude
+        Adduce.Types
+        Adduce.Utils
+        Paths_adduce
+    build-depends: directory
+

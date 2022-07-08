@@ -1,0 +1,10 @@
+; FizzBuzz
+
+For each number in a Range from 1 to 101 do (
+  Let N be the number.
+  Do If $ $ N `% 15 `== 0 then (Print "FizzBuzz") else
+     If $ $ N `% 3  `== 0 then (Print "Fizz")     else
+     If $ $ N `% 5  `== 0 then (Print "Buzz")     else
+     (Print N).
+).
+

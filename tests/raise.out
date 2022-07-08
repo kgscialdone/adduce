@@ -1,0 +1,7 @@
+Error: Same level
+Error: Lower level
+Caught by the inner catch
+This should execute
+Error: Some other message
+Inner catch with re-raise
+Error: It works!

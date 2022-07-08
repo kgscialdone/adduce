@@ -1,0 +1,28 @@
+; Raising and catching errors
+
+Do (
+  Catch (
+    Let Message be the error message.
+    Print the Concatenate of 'Error: ' with Message.
+  ).
+
+  Raise "Same level".
+  Do (Raise "Lower level").
+
+  Do (
+    Catch (Print "Caught by the inner catch". Drop).
+    Raise "Not the same message".
+  ).
+
+  Print "This should execute".
+  Do (
+    Raise "Some other message".
+    Print "This should not execute".
+  ).
+
+  Do (
+    Catch (Print "Inner catch with re-raise". Raise).
+    Raise "It works!".
+  ).
+).
+

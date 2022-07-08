@@ -1,0 +1,99 @@
+
+Alias Add +.
+Alias Multiply *.
+Alias Subtract -.
+Alias Divide /.
+Alias Modulo %.
+Alias Power ^.
+
+Def != (! ==).
+Alias Equal ==.
+Alias Eq ==.
+Alias NotEqual !=.
+Alias NotEq !=.
+Alias And &&.
+Alias Or ||.
+Alias Not !.
+
+Def Drop (Let _).
+Def Swap (Let X. Let Y. Y X).
+Def Twin (Let X. X X).
+Alias \ Swap.
+
+Def >= (<= \).
+Def > (Let X. Let Y. && != X Y >= X Y).
+Def < (Let X. Let Y. && != X Y <= X Y).
+Alias Greater >.
+Alias GreaterOrEq >=.
+Alias Lesser <.
+Alias LesserOrEq <=.
+
+Alias Concat Concatenate.
+
+Def Increment (+ 1).
+Def Decrement (- \ 1).
+Alias Inc Increment.
+Alias Dec Decrement.
+
+Def Unless (If !).
+Def $ (Do \).
+
+; Run the given Body for each value in Items.
+; Leaves the value of its execution on the stack, which doubles as Reduce
+;   when called with a starting value on the stack below others.
+Def For (
+  Let Items : List.
+  Def Body.
+  Drop While (has a Greater Length of Items than Twin the index) (
+    Let Index be from stack.
+    run Body over Get Index from Items.
+    Increment the Index.
+  ) 0.
+).
+Def Reduce (For \).
+
+Def Sum (Let Items : List. For Items `+ from 0).       ; Returns the sum of a list of numbers.
+Def Product (Let Items : List. For Items `* from 1).   ; Returns the product of a list of numbers.
+
+; Creates a List containing Value a given number of Times.
+Def Repeat (
+  Let Value be from the stack.
+  Let Times : Int.
+  List (Drop While (has a Greater Times than Twin the index) (
+    Let Index be from the stack.
+    add the Value to the list.
+    Increment the Index.
+  ) 0).
+).
+
+; Reverses a list.
+Def Reverse (Let Items. List (For Items ())).
+
+; Applies a given Body to each of the Items in a List, returning a new List of the results.
+; Adds the index below the item in the stack and expects it to be used; use Map if it's not needed.
+Def MapI (
+  Def Body.
+  Let Items : List.
+  Reverse List (Drop While (has a Greater Length of Items than the Twin index) (
+    Let Index be from the stack.
+    run the Body over Get Index from Items, and Index.
+    Increment the Index.
+  ) 0).
+).
+Def Map (Def Body. MapI (Body Drop Swap)).
+
+; Create a List of numbers between a LowerBound (inclusive) and UpperBound (exclusive).
+Def Range (
+  Let LowerBound : Int.
+  Let UpperBound : Int.
+  MapI `+ over Repeat LowerBound, Dec UpperBound times.
+).
+
+; Join a List into a String, with the given delimiter interspersed.
+Def Join (
+  Let Items : List.
+  Let Delim : String.
+  Let Items be the Reverse Tail of Map (ToString \ Delim) over Items.
+  Reduce by `Concat over the Items starting from ''.
+).
+
