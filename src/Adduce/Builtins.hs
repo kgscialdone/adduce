@@ -13,9 +13,8 @@ print (x:xs, env) = do
 print state =
   return $ _err state "Expected at least 1 value"
 
-iff (VBool True  : y : z : xs, env) = (y : xs, env)
-iff (VBool False : y : z : xs, env) = (z : xs, env)
-iff state                           = _err state "Expected a bool and 2 values"
+iff (x : y : z : xs, env) = ((if asBool x then y else z) : xs, env)
+iff state                 = _err state "Expected a bool and 2 values"
 
 doo (VBlock ss _ : xs, env) = do (s,_) <- interpret ss (xs, extend env); return (s,env)
 doo state                   = return $ _err state "Expected a block"
