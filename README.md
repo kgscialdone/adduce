@@ -13,6 +13,8 @@ For each number in a Range from 1 to 101 do (
 ).
 ```
 
+Documentation is WIP. For more examples of Adduce's syntax, see [`src/prelude.adc`](src/prelude.adc) or the [`tests`](tests) folder.
+
 Adduce was heavily inspired by [Cognate](https://github.com/cognate-lang/cognate), and borrows much of its syntax and semantics from it. The
 two differ mainly in implementation and goals; Cognate is a compiled language, while Adduce is interpreted. However, compatibility with Cognate
 programs is not a goal for Adduce, nor vice versa; the two are different languages, and will likely diverge over time rather than converge.
