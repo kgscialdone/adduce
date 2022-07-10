@@ -3,12 +3,12 @@
 
 module Main where
 
-import Control.Exception
-import Control.Monad
+import Control.Exception (finally)
+import Control.Monad (void, unless)
 import Data.List (sort, partition, isSuffixOf, intercalate)
 import Data.Map as Map (Map, insert, lookup, empty, elems)
-import Data.Maybe (fromMaybe, maybe, fromJust)
-import Data.Bifunctor (bimap, first)
+import Data.Maybe (maybe, fromJust)
+import Data.Bifunctor (bimap)
 
 import GHC.IO.Handle
 import System.IO
@@ -30,9 +30,8 @@ main = do
   args <- getArgs
   case args of
     ["run", path] -> do
-      prelude <- loadPrelude
       program <- readFile path
-      void $ exec program =<< extendScope prelude
+      void $ exec program =<< extendScope =<< loadPrelude
 
     ["test"] -> do
       result <- test
@@ -52,7 +51,7 @@ usage = unlines [
   ]
 
 -- | Quick run function for use in GHCI.
-run s = void $ exec s =<< loadPrelude
+run s = exec s =<< extendScope =<< loadPrelude
 
 -- | Simple test runner.
 --   Looks in folder @./tests@ for matching @.adc@ and @.out@ files, running the @.adc@ files
@@ -67,8 +66,8 @@ test = do
   (tests, unmch) <- return $ bimap (map (bimapBoth fromJust)) (map getUnmatched) $ partition bothJust $ elems testFiles
   unless (null unmch) $ putStrLn $ unlines $ map ("Skipping unmatched test file "++) unmch
 
-  preludeEnv <- loadPrelude
-  results <- mapM (runTest preludeEnv) tests
+  prelude <- loadPrelude
+  results <- mapM (runTest prelude) tests
 
   if and results
     then putStrLn "\nAll tests passed sucessfully"

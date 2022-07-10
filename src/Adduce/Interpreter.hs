@@ -3,22 +3,18 @@
 -- | Core language interpreter
 module Adduce.Interpreter where
 
-import Control.Exception
-import Control.Monad
+import Control.Exception (catch)
 import Data.List (reverse)
-import Data.Map (keys, lookup, empty)
-import Data.Maybe (isJust, fromJust, fromMaybe, mapMaybe)
+import Data.Maybe (isJust, fromJust)
 
 import Adduce.Types
 import Adduce.Parser
 import Adduce.Utils
 
-import Debug.Trace
-
 -- | Execute an Adduce program from a `String` of its source code and a parent `Env`.
 --   Returns the resulting `Env` after execution, or `Nothing` if an error occurred.
 exec :: String -> State -> IO (Maybe State)
-exec program state = catch (do
+exec program state = catch (
   case parseString program of
     Right statements -> do
       state <- interpret statements state

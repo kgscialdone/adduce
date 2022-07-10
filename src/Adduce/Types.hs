@@ -2,11 +2,11 @@
 -- | Core types and related functions.
 module Adduce.Types where
 
-import Control.Exception
-import Data.List
-import Data.Map as Map (Map, fromList, lookup, insert, empty, keys, elems, delete)
-import Data.Maybe
-import Data.Unique
+import Control.Exception (Exception)
+import Data.List (intercalate)
+import Data.Map as Map (Map, lookup, insert, empty, keys, elems, delete)
+import Data.Unique (Unique, newUnique, hashUnique)
+
 import Adduce.Utils
 
 type Statement    = [Token]
@@ -29,10 +29,13 @@ instance Show State where
   show s = intercalate "" [
     "State {\n  stack: ", show (stack s),
     "\n  scopeId: ", show (scopeId s),
-    "\n  bindings: ", show (keys (bindings s)),
-    "\n  parents: ", show $ zipWith (\a b -> show a ++ " => " ++ show b) (keys (parents s)) (elems (parents s)),
+    "\n  bindings: ", showMapFull (keyedPartition $ keys (bindings s)),
+    "\n  parents: ", showMapComp (parents s),
     "\n  errorhs: ", show (keys (errorhs s)),
     "\n}"]
+    where
+      showMapFull m = "[\n    " ++ intercalate ",\n    " (zipWith (\a b -> show a ++ " => " ++ show b) (keys m) (elems m)) ++ "\n  ]"
+      showMapComp m = "[" ++ intercalate "," (zipWith (\a b -> show a ++ "=>" ++ show b) (keys m) (elems m)) ++ "]"
 
 newState :: IO State
 newState = do
@@ -42,42 +45,29 @@ newState = do
 push :: Value -> State -> State
 push value state = state { stack = value : stack state }
 
-pop :: State -> (Value, State)
-pop state
-  | length (stack state) > 0 = (head $ stack state, state { stack = tail $ stack state })
-  | otherwise                = (VErr "Tried to pop empty stack", state)
-
 retop :: Value -> State -> State
-retop v = push v . snd . pop
+retop v state = push v state { stack = tail $ stack state }
 
 restack :: [Value] -> State -> State
 restack stack state = state { stack = stack }
 
 getBinding :: String -> State -> Maybe Value
-getBinding name state =
-  Map.lookup (scopeId state, name) (bindings state) ?: (getBinding name =<< getParent state)
+getBinding name state = Map.lookup (scopeId state, name) (bindings state) ?: (getBinding name =<< getParent state)
 
 setBinding :: String -> Value -> State -> State
-setBinding name value state =
-  state { bindings = Map.insert (scopeId state, name) value (bindings state) }
+setBinding name value state = state { bindings = Map.insert (scopeId state, name) value (bindings state) }
 
 getParent :: State -> Maybe State
-getParent state =
-  Map.lookup (scopeId state) (parents state) >>= \p -> Just state { scopeId = p }
+getParent state = Map.lookup (scopeId state) (parents state) >>= \p -> Just state { scopeId = p }
 
 withErrorH :: ErrorHandler -> State -> State
-withErrorH eh state =
-  state { errorhs = Map.insert (scopeId state) eh (errorhs state) }
+withErrorH eh state = state { errorhs = Map.insert (scopeId state) eh (errorhs state) }
 
 withoutErrorH :: State -> State
-withoutErrorH state =
-  state { errorhs = Map.delete (scopeId state) (errorhs state) }
+withoutErrorH state = state { errorhs = Map.delete (scopeId state) (errorhs state) }
 
 getErrorH :: State -> Maybe ErrorHandler
 getErrorH state = Map.lookup (scopeId state) (errorhs state)
-
-findErrorH :: State -> Maybe ErrorHandler
-findErrorH state = getErrorH state ?: (findErrorH =<< getParent state)
 
 extendScope :: State -> IO State
 extendScope state = do

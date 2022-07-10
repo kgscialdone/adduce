@@ -3,10 +3,11 @@
 module Adduce.Parser where
 
 import Text.Read (readMaybe)
-import Data.Char
-import Data.List (groupBy, find, partition)
+import Data.Char (isDigit, isLower, isSpace)
+import Data.List (groupBy, partition)
 import Data.Maybe (isJust, fromJust, mapMaybe)
 import Data.Either (isLeft, fromLeft, fromRight)
+
 import Adduce.Types
 import Adduce.Utils
 

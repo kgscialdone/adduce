@@ -16,8 +16,8 @@ import Paths_adduce
 -- | Load the prelude file and return its environment.
 loadPrelude = do
   prelude <- readFile =<< getDataFileName "src/prelude.adc"
-  preludeEnv <- exec prelude =<< extendScope =<< defaultState
-  return $ fromMaybe (error "Failed to load prelude") preludeEnv
+  prelude <- exec prelude =<< extendScope =<< defaultState
+  return $ fromMaybe (error "Failed to load prelude") prelude
 
 -- | Default program environment.
 --   This is seperate from the external prelude file, which will be loaded into it later.

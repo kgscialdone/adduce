@@ -1,13 +1,10 @@
 {-# LANGUAGE LambdaCase #-}
 
--- | Definitions of functions used in `Adduce.Prelude.defaultEnv`.
+-- | Definitions of functions used in `Adduce.Prelude.defaultState`.
 module Adduce.Builtins where
 
-import Data.List
 import Adduce.Types
 import Adduce.Interpreter
-
-import Debug.Trace
 
 print state@(State { stack = (x:xs) }) = do
   Prelude.print x
