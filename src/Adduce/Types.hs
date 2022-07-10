@@ -111,6 +111,8 @@ instance Show Value where
   show (VList x)    = prettyPrint (VList x)
   show (VBlock _ _) = "<block>"
   show (VErr x)     = "Error: " ++ x
+  show (VFunc _)    = "<func>"
+  show (VIOFn _)    = "<iofn>"
 
 instance Eq Value where
   VInt x  == VInt y  = x == y

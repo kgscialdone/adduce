@@ -14,8 +14,8 @@ import Data.Bifunctor (Bifunctor, bimap)
 _        ?: x = x
 
 -- | Inverse composition operator.
-(~>) :: (a -> b) -> (b -> c) -> (a -> c)
-f ~> g = g . f
+(&.) :: (a -> b) -> (b -> c) -> (a -> c)
+f &. g = g . f
 
 -- | Return the value from an `Either` that has the same left and right types.
 fromEither :: Either a a -> a
@@ -44,4 +44,11 @@ keyedPartition = keyedPartition' Map.empty where
     | Map.member k m = keyedPartition' (Map.insert k (v : m ! k) m) xs
     | otherwise      = keyedPartition' (Map.insert k [v] m) xs
   keyedPartition' m [] = m
+
+-- | Drop from the end of a list.
+dropEnd i xs
+  | i <= 0    = xs
+  | otherwise = f xs (drop i xs)
+  where f (x:xs) (y:ys) = x : f xs ys
+        f _ _           = []
 

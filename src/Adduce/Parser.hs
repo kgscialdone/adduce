@@ -18,8 +18,8 @@ parseString str =
     0 -> Right parsed
     _ -> Left verified
   where
-    parsed   = lines ~> map tokenize ~> filter (not . null) ~> concat ~> parse $ str
-    verified = mapMaybe verify ~> map ("Syntax error: "++) $ parsed
+    parsed   = lines &. map tokenize &. filter (not . null) &. concat &. parse $ str
+    verified = mapMaybe verify &. map ("Syntax error: "++) $ parsed
 
 -- | Tokenize a string into workable chunks for Adduce to use.
 tokenize :: String -> [Either Token String]
@@ -87,7 +87,7 @@ tokenize = tokenize'
 
 -- | Parse a tokenized Adduce program into a list of `Statement`s.
 parse :: [Either Token String] -> [Statement]
-parse = parse' ~> groupBy groupStatements ~> map (filter filterEnds) ~> filter (not . null)
+parse = parse' &. groupBy groupStatements &. map (filter filterEnds) &. filter (not . null)
   where
     parse' :: [Either Token String] -> [Token]
     parse' lst = let (err,tok) = partition isLeft lst in
@@ -124,7 +124,7 @@ parse = parse' ~> groupBy groupStatements ~> map (filter filterEnds) ~> filter (
       | otherwise                             = Ident t : parse'' ts
     parse'' []                                = []
 
-    consumeParens ts = span (fst ~> (> 0)) $ zip (getNestDepth ts) ts
+    consumeParens ts = span (fst &. (> 0)) $ zip (getNestDepth ts) ts
     getNestDepth = scanl (\acc v -> acc + case v of "(" -> 1; ")" -> -1; _ -> 0) 1
 
     groupStatements StmtEnd _ = False

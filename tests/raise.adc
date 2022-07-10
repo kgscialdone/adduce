@@ -3,14 +3,14 @@
 Do (
   Catch (
     Let Message be the error message.
-    Print the Concatenate of 'Error: ' with Message.
+    Print the Concatenation of 'Error: ' with Message.
   ).
 
   Raise "Same level".
   Do (Raise "Lower level").
 
   Do (
-    Catch (Print "Caught by the inner catch". Drop).
+    Catch (Print "Caught by the inner catch". Drop the error message).
     Raise "Not the same message".
   ).
 
@@ -21,7 +21,7 @@ Do (
   ).
 
   Do (
-    Catch (Print "Inner catch with re-raise". Raise).
+    Catch (Print "Inner catch with re-raise". Raise the error again).
     Raise "It works!".
   ).
 ).

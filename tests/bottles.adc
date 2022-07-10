@@ -3,12 +3,13 @@
 Def Plural      (Let N. If $ N (==) 1 then ''    else 's').
 Def Punctuation (Let N. If $ N (==) 0 then '...' else '!').
 
-For each of a Reverse Range from 1 to 100 do (
-  Let Number be from the range.
-  Print the result of Join a List (Number, ' bottle', Plural for Number, ' of beer on the wall,') with ''.
-  Print the result of Join a List (Number, ' bottle', Plural for Number, ' of beer,') with ''.
+For each of a Reversed Range from 1 to 100 do (
+  Let a Number be from the range.
+  Print a Joined List of (Number, ' bottle', Plural for Number, ' of beer on the wall,') with the delimiter ''.
+  Print a Joined List of (Number, ' bottle', Plural for Number, ' of beer,') with the delimiter ''.
   Print 'Take one down, pass it around,'.
-  Let Number be the Decrement Number.
-  Print the result of Join a List ($ Number (Or) 'No more', ' bottle', Plural for Number, ' of beer on the wall', Punctuation for Number, '\n') with ''.
+  Let the Number be the Decremented Number.
+  Print a Joined List of ($ the Number `Or 'No more' if it's zero, ' bottle', the Plural for Number,
+    ' of beer on the wall', the Punctuation for Number, '\n') with the delimiter ''.
 ).
 
