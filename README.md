@@ -7,14 +7,24 @@ words starting with lowercase letters are ignored. This allows developers to wri
 boilerplate, turning their code into readable sentences. Once lowercase words have been stripped out, Adduce programs
 execute in sentences, separated by periods and each from right to left.
 
+Adduce also implements automatic desuffixing, which allows for natural conjugation of identifiers; if no more specific
+binding exists, it will remove a number of different common suffixes from the identifier, attempting to resolve the
+modified identifiers in a "least modification first" pattern. This means, for example, that `Mapping`, `Mapped`, `Maps`,
+and `Mapper` are all valid and automatic aliases for `Map`.
+
 ```lisp
-; Fizzbuzz in Adduce
-For each number in a Range from 1 to 101 do (
-  Let N be the number.
-  Do If $ $ N `% 15 `== 0 then (Print "FizzBuzz") else
-     If $ $ N `% 3  `== 0 then (Print "Fizz")     else
-     If $ $ N `% 5  `== 0 then (Print "Buzz")     else
-     (Print N).
+; 99 Bottles
+Def Plural      (Let N. If $ N `== 1 then ''    else 's').
+Def Punctuation (Let N. If $ N `== 0 then '...' else '!').
+
+For each of a Reversed Range from 1 to 100 do (
+  Let a Number be from the range.
+  Print a Joined List of (Number, ' bottle', Plural for Number, ' of beer on the wall,') with the delimiter ''.
+  Print a Joined List of (Number, ' bottle', Plural for Number, ' of beer,') with the delimiter ''.
+  Print 'Take one down, pass it around,'.
+  Let the Number be the $ Number, `Decremented.
+  Print a Joined List of ($ the Number `Or 'No more' if it's zero, ' bottle', the Plural for Number,
+    ' of beer on the wall', the Punctuation for Number, '\n') with the delimiter ''.
 ).
 ```
 

@@ -8,7 +8,7 @@ For each of a Reversed Range from 1 to 100 do (
   Print a Joined List of (Number, ' bottle', Plural for Number, ' of beer on the wall,') with the delimiter ''.
   Print a Joined List of (Number, ' bottle', Plural for Number, ' of beer,') with the delimiter ''.
   Print 'Take one down, pass it around,'.
-  Let the Number be the Decremented Number.
+  Let the Number be the $ Number, `Decremented.
   Print a Joined List of ($ the Number `Or 'No more' if it's zero, ' bottle', the Plural for Number,
     ' of beer on the wall', the Punctuation for Number, '\n') with the delimiter ''.
 ).
