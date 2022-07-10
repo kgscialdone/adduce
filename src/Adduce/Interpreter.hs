@@ -13,15 +13,17 @@ import Adduce.Types
 import Adduce.Parser
 import Adduce.Utils
 
+import Debug.Trace
+
 -- | Execute an Adduce program from a `String` of its source code and a parent `Env`.
 --   Returns the resulting `Env` after execution, or `Nothing` if an error occurred.
-exec :: String -> Env -> IO (Maybe Env)
-exec program env = catch (do
+exec :: String -> State -> IO (Maybe State)
+exec program state = catch (do
   case parseString program of
     Right statements -> do
-      (stack, env) <- interpret statements ([], env)
-      handleError (stack, fromJust $ findParent (isJust . errorHandler) env)
-      return $ Just env
+      state <- interpret statements state
+      handleError $ fromJust $ findParent (isJust . getErrorH) state
+      return $ Just state
     Left syntaxErrors -> do
       putStrLn $ init $ unlines syntaxErrors
       return Nothing)
@@ -36,56 +38,60 @@ interpret statements state =
   handleError =<< foldPartialIO (handleError' interpret') state (map reverse statements)
   where
     interpret' :: Statement -> State -> IO State
-    interpret' stmt (stack, env) =
-      fromEither `fmap` handleError' (\s _ -> interpret'' s) (stack, env) stmt
+    interpret' stmt state@(State { stack = stk }) =
+      fromEither `fmap` handleError' (\s _ -> interpret'' s) state stmt
       where
         interpret'' :: Statement -> IO State
-        interpret'' (IntLit x : xs)  = interpret' xs (VInt x : stack,                 env)
-        interpret'' (FltLit x : xs)  = interpret' xs (VFlt x : stack,                 env)
-        interpret'' (StrLit x : xs)  = interpret' xs (VStr x : stack,                 env)
-        interpret'' (BoolLit x : xs) = interpret' xs (VBool x : stack,                env)
-        interpret'' (Block ss : xs)  = interpret' xs (VBlock ss (extend env) : stack, env)
+        interpret'' (IntLit x : xs)  = interpret' xs $ push (VInt x) state
+        interpret'' (FltLit x : xs)  = interpret' xs $ push (VFlt x) state
+        interpret'' (StrLit x : xs)  = interpret' xs $ push (VStr x) state
+        interpret'' (BoolLit x : xs) = interpret' xs $ push (VBool x) state
+        interpret'' (Block ss : xs)  = do
+          newState <- extendScope state
+          interpret' xs $ push (VBlock ss (scopeId newState)) newState { scopeId = scopeId state }
 
-        interpret'' (Form "Let" [Ident x] : xs) = let' stack where
-          let' (y:ys) = interpret' xs (ys, define env x y)
-          let' _      = interpret' xs ([VErr "Expected 1 value"], env)
+        interpret'' (Form "Let" [Ident x] : xs) = let' stk where
+          let' (y:ys) = interpret' xs $ setBinding x y $ restack ys state
+          let' _      = interpret' xs $ push (VErr "Expected 1 value") state
 
-        interpret'' (Form "Def" [Ident x] : xs) = def' stack where
-          def' (VBlock ss be : ys) = interpret' xs (ys, define env x (VIOFn (\(s,e) -> do (ns,_) <- interpret ss (s,be); return (ns,e))))
-          def' _                   = interpret' xs ([VErr "Expected a block"], env)
+        interpret'' (Form "Def" [Ident x] : xs) = def' stk where
+          def' (VBlock ss be : ys) = interpret' xs $ setBinding x (VIOFn (\s -> do
+            ns <- interpret ss s { scopeId = be }
+            return $ restack (stack ns) s)) $ restack ys state
+          def' _                   = interpret' xs $ push (VErr "Expected a block") state
 
-        interpret'' (Form ":" [Ident x] : xs) = tch' x stack where
-          tch' "Int"    (VInt y : ys)     = interpret' xs (stack, env)
-          tch' "Float"  (VFlt y : ys)     = interpret' xs (stack, env)
-          tch' "String" (VStr y : ys)     = interpret' xs (stack, env)
-          tch' "Bool"   (VBool y : ys)    = interpret' xs (stack, env)
-          tch' "List"   (VList y : ys)    = interpret' xs (stack, env)
-          tch' "Block"  (VBlock y z : ys) = interpret' xs (stack, env)
-          tch' _ (y:ys) = interpret' xs (VErr ("Type error, expected `"++x++"` but got `"++typeName y++"`") : ys, env)
-          tch' _ _      = interpret' xs (VErr "Expected 1 value" : stack, env)
+        interpret'' (Form ":" [Ident x] : xs) = tch' x stk where
+          tch' "Int"    (VInt y : _)     = interpret' xs state
+          tch' "Float"  (VFlt y : _)     = interpret' xs state
+          tch' "String" (VStr y : _)     = interpret' xs state
+          tch' "Bool"   (VBool y : _)    = interpret' xs state
+          tch' "List"   (VList y : _)    = interpret' xs state
+          tch' "Block"  (VBlock y z : _) = interpret' xs state
+          tch' _ (y:_) = interpret' xs $ push (VErr ("Type error, expected `"++x++"` but got `"++typeName y++"`")) state
+          tch' _ _     = interpret' xs $ push (VErr "Expected 1 value") state
 
-        interpret'' (Form "?:" [Ident x] : xs) = tch' x stack where
-          tch' "Int"    (VInt y : ys)     = interpret' xs (VBool True : ys, env)
-          tch' "Float"  (VFlt y : ys)     = interpret' xs (VBool True : ys, env)
-          tch' "String" (VStr y : ys)     = interpret' xs (VBool True : ys, env)
-          tch' "Bool"   (VBool y : ys)    = interpret' xs (VBool True : ys, env)
-          tch' "List"   (VList y : ys)    = interpret' xs (VBool True : ys, env)
-          tch' "Block"  (VBlock y z : ys) = interpret' xs (VBool True : ys, env)
-          tch' _ (_:ys) = interpret' xs (VBool False : ys, env)
-          tch' _ _      = interpret' xs (VErr "Expected 1 value" : stack, env)
+        interpret'' (Form "?:" [Ident x] : xs) = tch' x stk where
+          tch' "Int"    (VInt y : _)     = interpret' xs $ retop (VBool True) state
+          tch' "Float"  (VFlt y : _)     = interpret' xs $ retop (VBool True) state
+          tch' "String" (VStr y : _)     = interpret' xs $ retop (VBool True) state
+          tch' "Bool"   (VBool y : _)    = interpret' xs $ retop (VBool True) state
+          tch' "List"   (VList y : _)    = interpret' xs $ retop (VBool True) state
+          tch' "Block"  (VBlock y z : _) = interpret' xs $ retop (VBool True) state
+          tch' _ (_:_) = interpret' xs $ retop (VBool False) state
+          tch' _ _     = interpret' xs $ push (VErr "Expected 1 value") state
 
-        interpret'' (Form "Alias" [Ident a, Ident b] : xs) = case envLookup b env of
-          Just x  -> interpret' xs (stack, define env a x)
-          Nothing -> interpret' xs (VErr ("Unknown symbol `" ++ b ++ "`") : stack, env)
+        interpret'' (Form "Alias" [Ident a, Ident b] : xs) = case getBinding b state of
+          Just x  -> interpret' xs $ setBinding a x state
+          Nothing -> interpret' xs $ push (VErr ("Unknown symbol `" ++ b ++ "`")) state
 
-        interpret'' (Ident x : xs) = case envLookup x env of
-          Just (VFunc f)  -> interpret' xs $ f (stack,env)
-          Just (VIOFn f)  -> interpret' xs =<< f (stack,env)
-          Just x          -> interpret' xs (x : stack, env)
-          Nothing         -> interpret' xs (VErr ("Unknown symbol `" ++ x ++ "`") : stack, env)
+        interpret'' (Ident x : xs) = case getBinding x state of
+          Just (VFunc f) -> interpret' xs $ restack (f stk) state
+          Just (VIOFn f) -> interpret' xs =<< f state
+          Just x         -> interpret' xs $ push x state
+          Nothing        -> interpret' xs $ push (VErr ("Unknown symbol `" ++ x ++ "`")) state
 
         interpret'' (x:xs) = error $ "Internal error: Unhandled token " ++ show x
-        interpret'' []     = return (stack,env)
+        interpret'' []     = return state
 
 -- | Attempt to handle a Catchable error.
 --   Searches the current `Env` for an error handler, and returns the resulting state.
@@ -99,10 +105,10 @@ handleError s = fromEither `fmap` handleError' (\a b -> return b) s []
 --   - `Right` represents that the error was properly handled with no re-raise.
 --   - `Left` represents that the error wasn't handled, or that the handler raised a new error.
 handleError' :: (Statement -> State -> IO State) -> State -> Statement -> IO (Either State State)
-handleError' _ (VErr e : xs, env) s = case errorHandler env of
-  Nothing -> return $ Left (VErr e : xs, env)
-  Just f  -> f e env >>= \case
-    (y : ys, _) -> return $ Left (y : xs, withoutErrorHandler env)
-    _           -> return $ Right (xs, env)
-handleError' c state s = Right `fmap` c s state
+handleError' c state s = case (stack state, getErrorH state) of
+  (VErr e : xs, Nothing) -> return $ Left state
+  (VErr e : xs, Just eh) -> eh e state >>= \newState -> case stack newState of
+    (y@(VErr _) : _) -> return $ Left  $ retop y $ withoutErrorH state
+    _                -> return $ Right $ restack xs state
+  (_, _)                 -> Right `fmap` c s state
 

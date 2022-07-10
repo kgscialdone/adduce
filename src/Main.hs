@@ -30,9 +30,9 @@ main = do
   args <- getArgs
   case args of
     ["run", path] -> do
-      preludeEnv <- loadPrelude
+      prelude <- loadPrelude
       program <- readFile path
-      void $ exec program $ extend preludeEnv
+      void $ exec program =<< extendScope prelude
 
     ["test"] -> do
       result <- test
@@ -78,11 +78,11 @@ test = do
     pass = "\x001B[1;32m\x2713\x001B[0m Test passed: "
     fail = "\x001B[1;31m\x2717\x001B[0m Test failed: "
 
-    runTest :: Env -> (String, String) -> IO Bool
-    runTest preludeEnv (prgPath, outPath) = do
+    runTest :: State -> (String, String) -> IO Bool
+    runTest prelude (prgPath, outPath) = do
       program <- readFile $ "tests/" ++ prgPath
       expect  <- readFile $ "tests/" ++ outPath
-      actual  <- captureOutput $ void $ exec program $ extend preludeEnv
+      actual  <- captureOutput $ void $ exec program =<< extendScope prelude
       if expect == actual
         then putStrLn $ pass ++ prgPath
         else putStrLn $ unlines [

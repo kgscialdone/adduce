@@ -16,51 +16,51 @@ import Paths_adduce
 -- | Load the prelude file and return its environment.
 loadPrelude = do
   prelude <- readFile =<< getDataFileName "src/prelude.adc"
-  preludeEnv <- exec prelude $ extend defaultEnv
+  preludeEnv <- exec prelude =<< extendScope =<< defaultState
   return $ fromMaybe (error "Failed to load prelude") preludeEnv
 
 -- | Default program environment.
 --   This is seperate from the external prelude file, which will be loaded into it later.
-defaultEnv = Env {
-  parent = Nothing,
-  errorHandler = Just $ \e _ -> return $ throw $ AdduceError e,
-  scope = Map.fromList [
-    ("True",  VBool True),
-    ("False", VBool False),
+defaultState = newState >>= \s -> return $
+  withErrorH (\e st -> return $ throw $ AdduceError e) $
+  foldr (\(k,v) s -> setBinding k v s) s bindings
+  where
+    bindings = [
+      ("True",  VBool True),
+      ("False", VBool False),
 
-    ("Print", VIOFn B.print),
-    ("Stack", VIOFn (\s -> do print . fst $ s; return s)),
-    ("PrEnv", VIOFn (\s -> do print . snd $ s; return s)),
-    ("PrTyp", VIOFn (\(x:xs,e) -> do putStrLn . typeName $ x; return (x:xs,e))),
+      ("Print", VIOFn B.print),
+      ("Stack", VIOFn (\st@(State { stack = s })      -> do print s; return st)),
+      ("PrTyp", VIOFn (\st@(State { stack = (x:xs) }) -> do putStrLn . typeName $ x; return st)),
+      ("PrEnv", VIOFn (\st -> do print st; return st)),
 
-    ("Do",    VIOFn B.doo),
-    ("If",    VFunc B.iff),
-    ("List",  VIOFn B.list),
-    ("While", VIOFn B.while),
+      ("Do",    VIOFn B.doo),
+      ("If",    VFunc B.iff),
+      ("List",  VIOFn B.list),
+      ("While", VIOFn B.while),
 
-    ("==", VFunc B.eq),
-    ("&&", VFunc B.and),
-    ("||", VFunc B.or),
-    ("!",  VFunc B.not),
-    ("<=", VFunc B.le),
+      ("==", VFunc B.eq),
+      ("&&", VFunc B.and),
+      ("||", VFunc B.or),
+      ("!",  VFunc B.not),
+      ("<=", VFunc B.le),
 
-    ("+", VFunc B.add),
-    ("-", VFunc B.sub),
-    ("*", VFunc B.mul),
-    ("/", VFunc B.div),
-    ("%", VFunc B.mod),
-    ("^", VFunc B.pow),
+      ("+", VFunc B.add),
+      ("-", VFunc B.sub),
+      ("*", VFunc B.mul),
+      ("/", VFunc B.div),
+      ("%", VFunc B.mod),
+      ("^", VFunc B.pow),
 
-    ("Length",      VFunc B.length),
-    ("Get",         VFunc B.get),
-    ("Head",        VFunc B.head),
-    ("Tail",        VFunc B.tail),
-    ("Concatenate", VFunc B.concat),
+      ("Length",      VFunc B.length),
+      ("Get",         VFunc B.get),
+      ("Head",        VFunc B.head),
+      ("Tail",        VFunc B.tail),
+      ("Concatenate", VFunc B.concat),
 
-    ("ToString", VFunc B.toString),
+      ("ToString", VFunc B.toString),
 
-    ("Raise", VFunc B.raise),
-    ("Catch", VIOFn B.catch)
-    ]
-}
+      ("Raise", VFunc B.raise),
+      ("Catch", VIOFn B.catch)
+      ]
 

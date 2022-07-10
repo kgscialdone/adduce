@@ -4,49 +4,90 @@ module Adduce.Types where
 
 import Control.Exception
 import Data.List
-import Data.Map as Map (Map, lookup, insert, empty, keys)
+import Data.Map as Map (Map, fromList, lookup, insert, empty, keys, elems, delete)
 import Data.Maybe
+import Data.Unique
 import Adduce.Utils
 
-type Statement = [Token]
-type State     = ([Value], Env)
+type Statement    = [Token]
+type ErrorHandler = String -> State -> IO State
 
--- | Scope construct containing bound variables, parent scope, and error handlers.
-data Env = Env
-  { scope  :: Map String Value
-  , parent :: Maybe Env
-  , errorHandler :: Maybe (String -> Env -> IO State)
+newtype ScopeId = ScopeId Unique deriving (Eq, Ord)
+
+instance Show ScopeId where
+  show (ScopeId uniq) = show $ hashUnique uniq
+
+data State = State
+  { stack    :: [Value]
+  , scopeId  :: ScopeId
+  , bindings :: Map (ScopeId, String) Value
+  , parents  :: Map ScopeId ScopeId
+  , errorhs  :: Map ScopeId (String -> State -> IO State)
   }
 
--- | Lookup a given name in an `Env`.
-envLookup :: String -> Env -> Maybe Value
-envLookup name env = Map.lookup name (scope env) ?: (parent env >>= envLookup name)
+instance Show State where
+  show s = intercalate "" [
+    "State {\n  stack: ", show (stack s),
+    "\n  scopeId: ", show (scopeId s),
+    "\n  bindings: ", show (keys (bindings s)),
+    "\n  parents: ", show $ zipWith (\a b -> show a ++ " => " ++ show b) (keys (parents s)) (elems (parents s)),
+    "\n  errorhs: ", show (keys (errorhs s)),
+    "\n}"]
 
--- | Set a value in an `Env`'s scope.
-define :: Env -> String -> Value -> Env
-define env name value = Env (Map.insert name value (scope env)) (parent env) (errorHandler env)
+newState :: IO State
+newState = do
+  newId <- ScopeId `fmap` newUnique
+  return $ State { stack = [], scopeId = newId, bindings = empty, parents = empty, errorhs = empty }
 
--- | Add the given error handler function to an `Env`.
-withErrorHandler :: Env -> (String -> Env -> IO State) -> Env
-withErrorHandler env h = Env (scope env) (parent env) (Just h)
+push :: Value -> State -> State
+push value state = state { stack = value : stack state }
 
--- | Remove an `Env`'s error handler if it exists.
-withoutErrorHandler :: Env -> Env
-withoutErrorHandler env = Env (scope env) (parent env) Nothing
+pop :: State -> (Value, State)
+pop state
+  | length (stack state) > 0 = (head $ stack state, state { stack = tail $ stack state })
+  | otherwise                = (VErr "Tried to pop empty stack", state)
 
--- | Deeply recur into an `Env`'s parents until a predicate is met.
-findParent :: (Env -> Bool) -> Env -> Maybe Env
-findParent f e
-  | f e       = Just e
-  | otherwise = findParent f =<< parent e
+retop :: Value -> State -> State
+retop v = push v . snd . pop
 
--- | Create a new `Env` with the given `Env` as its parent.
-extend :: Env -> Env
-extend env = Env Map.empty (Just env) Nothing
+restack :: [Value] -> State -> State
+restack stack state = state { stack = stack }
 
-instance Show Env where
-  show Env { scope=s, parent=p, errorHandler=e } =
-    "Env (" ++ unwords (Map.keys s) ++ ")\n  " ++ maybe "No error handler" (const "Has error handler") e ++ "\n" ++ (unlines . Data.List.map ("  "++) . lines) (show p)
+getBinding :: String -> State -> Maybe Value
+getBinding name state =
+  Map.lookup (scopeId state, name) (bindings state) ?: (getBinding name =<< getParent state)
+
+setBinding :: String -> Value -> State -> State
+setBinding name value state =
+  state { bindings = Map.insert (scopeId state, name) value (bindings state) }
+
+getParent :: State -> Maybe State
+getParent state =
+  Map.lookup (scopeId state) (parents state) >>= \p -> Just state { scopeId = p }
+
+withErrorH :: ErrorHandler -> State -> State
+withErrorH eh state =
+  state { errorhs = Map.insert (scopeId state) eh (errorhs state) }
+
+withoutErrorH :: State -> State
+withoutErrorH state =
+  state { errorhs = Map.delete (scopeId state) (errorhs state) }
+
+getErrorH :: State -> Maybe ErrorHandler
+getErrorH state = Map.lookup (scopeId state) (errorhs state)
+
+findErrorH :: State -> Maybe ErrorHandler
+findErrorH state = getErrorH state ?: (findErrorH =<< getParent state)
+
+extendScope :: State -> IO State
+extendScope state = do
+  newId <- ScopeId `fmap` newUnique
+  return $ state { scopeId = newId, parents = Map.insert newId (scopeId state) (parents state) }
+
+findParent :: (State -> Bool) -> State -> Maybe State
+findParent f state
+  | f state   = Just state
+  | otherwise = findParent f =<< getParent state
 
 
 -- | The smallest semantically meaningful chunk of an Adduce program.
@@ -67,10 +108,10 @@ data Value = VInt Integer
            | VStr String
            | VBool Bool
            | VList [Value]
-           | VBlock [Statement] Env
+           | VBlock [Statement] ScopeId
            | VErr String
-           | VFunc (State -> State)
-           | VIOFn (State -> IO State)
+           | VFunc ([Value] -> [Value])
+           | VIOFn (State   -> IO State)
 
 instance Show Value where
   show (VInt x)     = show x
