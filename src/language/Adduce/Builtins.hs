@@ -84,15 +84,15 @@ mul (VFlt x : VInt y : xs) = VFlt (x * fromIntegral y) : xs
 mul (VFlt x : VFlt y : xs) = VFlt (x * y) : xs
 mul xs                     = VErr "Expected 2 numbers" : xs
 
-div (VInt x : VInt 0 : xs) = VBool False : xs
-div (VInt x : VFlt 0 : xs) = VBool False : xs
+div (VInt x : VInt 0 : xs) = VFlt 0 : xs
+div (VInt x : VFlt 0 : xs) = VFlt 0 : xs
 div (VInt x : VInt y : xs) = VFlt (fromIntegral x / fromIntegral y) : xs
 div (VInt x : VFlt y : xs) = VFlt (fromIntegral x / y) : xs
 div (VFlt x : VInt y : xs) = VFlt (x / fromIntegral y) : xs
 div (VFlt x : VFlt y : xs) = VFlt (x / y) : xs
 div xs                     = VErr "Expected 2 numbers" : xs
 
-mod (VInt x : VInt 0 : xs) = VBool False : xs
+mod (VInt x : VInt 0 : xs) = VInt 0 : xs
 mod (VInt x : VInt y : xs) = VInt (Prelude.mod x y) : xs
 mod xs                     = VErr "Expected 2 numbers" : xs
 
