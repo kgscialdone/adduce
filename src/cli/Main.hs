@@ -36,8 +36,8 @@ execCli = \case
     ["run",            path] -> run path False
     ["run"]                  -> do putStrLn usage; exitFailure
 
-    ["exec", "-d",      program] -> void $ exec program =<< extendScope =<< debugScope =<< loadPrelude
-    ["exec", "--debug", program] -> void $ exec program =<< extendScope =<< debugScope =<< loadPrelude
+    ["exec", "-d",      program] -> void $ exec program =<< extendScope =<< debugScope
+    ["exec", "--debug", program] -> void $ exec program =<< extendScope =<< debugScope
     ["exec", "-d"]               -> do putStrLn usage; exitFailure
     ["exec", "--debug"]          -> do putStrLn usage; exitFailure
     ["exec",            program] -> void $ exec program =<< extendScope =<< loadPrelude
@@ -51,10 +51,11 @@ execCli = \case
       void $ exec program =<< extendScope =<< loadPrelude
     run path True = do
       program <- readFile path
-      void $ exec program =<< extendScope =<< debugScope =<< loadPrelude
+      void $ exec program =<< extendScope =<< debugScope
 
-    debugScope :: State -> IO State
-    debugScope prelude = extendScope prelude >>= \s -> return $ foldr (\(k,v) s -> setBinding k v s) s bindings
+    debugScope :: IO State
+    debugScope = loadPrelude >>= extendScope >>= \s ->
+      return $ foldr (\(k,v) s -> setBinding k v s) s bindings
       where
         bindings = [
           ("PrStack", VIOFn (\st@(State { stack = s })      -> do print s; return st)),
