@@ -1,6 +1,8 @@
 -- Adduce Interpreter v0.1.0
 -- by Katrina Scialdone
 
+{-# LANGUAGE LambdaCase #-}
+
 module Main where
 
 import Control.Monad (void)
@@ -12,16 +14,18 @@ import Adduce.Interpreter
 import Adduce.Prelude
 import Adduce.Types
 
+-- | Current interpreter version
 version = "0.1.0"
 
 -- | Interpeter program entry point.
---   Takes a path to the desired Adduce program from the command line.
+main = execCli =<< getArgs
 
---   TODOOO: Make CLI more flexible (work around flags, etc.)
---   TODOO: Add more CLI options
-main = do
-  args <- getArgs
-  case args of
+-- | Quick run function for use in GHCI.
+run s = execCli ["exec", "-d", s]
+
+-- | Process CLI args and take appropriate action.
+execCli :: [String] -> IO ()
+execCli = \case
     ["--version"] -> putStrLn version
     ["-v"]        -> putStrLn version
 
@@ -58,19 +62,15 @@ main = do
           ("PrState", VIOFn (\st -> do print st; return st))
           ]
 
--- | Usage string printed when incorrect arguments are given.
-usage = unlines [
-  "Usage: adduce <subcommand> [flags] <subcommand args>\n",
-  "Flags:",
-  "  --version, -v \tShow the current version",
-  "  --debug, -d   \tRun with debug output functions enabled",
-  "",
-  "Subcommands:",
-  "  run <path>    \tRun an Adduce program from a .adc file",
-  "  exec <program>\tRun an Adduce program from a string"
-  -- "  test      \tRun programs in ./test, checking their output against matching .out files"
-  ]
-
--- | Quick run function for use in GHCI.
-run s = exec s =<< extendScope =<< loadPrelude
+    usage = unlines [
+      "Usage: adduce <subcommand> [flags] <subcommand args>",
+      "",
+      "Flags:",
+      "  --version, -v \tShow the current version",
+      "  --debug, -d   \tRun with debug output functions enabled",
+      "",
+      "Subcommands:",
+      "  run <path>    \tRun an Adduce program from a .adc file",
+      "  exec <program>\tRun an Adduce program from a string"
+      ]
 
