@@ -30,7 +30,7 @@ defaultState = newState >>= \s -> return $
       ("Do",    VIOFn B.doo),
       ("If",    VFunc B.iff),
       ("List",  VIOFn B.list),
-      ("While", VIOFn B.while),
+      ("Loop!", VIOFn B.loop),
 
       ("==",  VFunc B.eq),
       ("<=",  VFunc B.le),
@@ -45,8 +45,6 @@ defaultState = newState >>= \s -> return $
       ("%", VFunc B.mod),
       ("^", VFunc B.pow),
 
-      ("Length",      VFunc B.length),
-      ("Get",         VFunc B.get),
       ("Head",        VFunc B.head),
       ("Tail",        VFunc B.tail),
       ("Concatenate", VFunc B.concat),

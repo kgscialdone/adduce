@@ -29,18 +29,13 @@ list state@(State { stack = (VBlock ss _ : xs) }) = do
     _                -> return $ restack (VList newStack : xs) state
 list state = return $ push (VErr "Expected a block") state
 
-while state@(State { stack = (c@(VBlock cs _) : b@(VBlock bs _) : xs) }) = do
+loop state@(State { stack = (b@(VBlock ss _) : xs) }) = do
   newState <- extendScope state
-  (State { stack = newStack }) <- handleError =<< (interpret cs $ restack xs $ newState)
+  (State { stack = newStack }) <- handleError =<< (interpret ss $ restack xs $ newState)
   case newStack of
-    (VBool True : xs) -> do
-      newState <- extendScope state
-      (State { stack = newStack }) <- handleError =<< (interpret bs $ restack xs $ newState)
-      while $ restack (c : b : newStack) state
-    (VBool False : xs) -> return $ restack xs state
-    (e@(VErr _) : _)   -> return $ push e state
-    _                  -> return $ push (VErr "Expected a boolean") state
-while state = return $ push (VErr "Expected 2 blocks") state
+    (e@(VErr _) : _) -> return $ restack (e : xs) state
+    _                -> loop $ restack (b : newStack) state
+loop state = return $ push (VErr "Expected a block") state
 
 raise (VStr x : xs) = VErr x : xs
 raise xs            = VErr "Expected a string" : xs
@@ -108,20 +103,12 @@ le (VFlt x : VInt y : xs) = VBool (x <= fromIntegral y) : xs
 le (VFlt x : VFlt y : xs) = VBool (x <= y) : xs
 le xs                     = VErr "Expected 2 numbers" : xs
 
-length (VList x : xs) = VInt (toInteger $ Prelude.length x) : xs
-length xs             = VErr "Expected a list" : xs
-
-get (VInt x : VList y : xs)
-  | x >= 0 && Prelude.length y > fromInteger x = y !! fromInteger x : xs
-  | otherwise                                  = VErr "Invalid list index" : xs
-get xs                                         = VErr "Expected an int and a list" :xs
-
 head (VList x : xs)
   | null x    = VErr "Expected a non-empty list" : xs
   | otherwise = Prelude.head x : xs
 head (VStr x : xs)
   | null x    = VErr "Expected a non-empty string" : xs
-  | otherwise = VStr (show $ Prelude.head x) : xs
+  | otherwise = VStr [Prelude.head x] : xs
 head xs       = VErr "Expected a list or string" : xs
 
 tail (VList x : xs)
