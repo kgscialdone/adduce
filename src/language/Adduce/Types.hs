@@ -108,8 +108,8 @@ instance Show Value where
   show (VFlt x)     = show x
   show (VStr x)     = x
   show (VBool x)    = show x
-  show (VList x)    = prettyPrint (VList x)
-  show (VBlock _ _) = "<block>"
+  show l@(VList x)  = prettyPrint l
+  show (VBlock x _) = "<block (" ++ intercalate ", " (map show $ intercalate [StmtEnd] x) ++ ")>"
   show (VErr x)     = "Error: " ++ x
   show (VFunc _)    = "<func>"
   show (VIOFn _)    = "<iofn>"
@@ -151,6 +151,7 @@ typeName (VStr _) = "String"
 typeName (VBool _) = "Bool"
 typeName (VList _) = "List"
 typeName (VBlock _ _) = "Block"
+typeName (VErr _) = "Error"
 typeName _ = "Invalid type"
 
 -- | Exception type thrown by Adduce's default error handler.
