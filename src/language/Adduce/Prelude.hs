@@ -30,10 +30,6 @@ defaultState = newState >>= \s -> return $
       ("False", VBool False),
 
       ("Print", VIOFn B.print),
-      ("Stack", VIOFn (\st@(State { stack = s })      -> do print s; return st)),
-      ("PrTyp", VIOFn (\st@(State { stack = (x:xs) }) -> do putStrLn . typeName $ x; return st)),
-      ("PrEnv", VIOFn (\st -> do print st; return st)),
-
       ("Do",    VIOFn B.doo),
       ("If",    VFunc B.iff),
       ("List",  VIOFn B.list),

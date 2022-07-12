@@ -25,22 +25,49 @@ main = do
     ["--version"] -> putStrLn version
     ["-v"]        -> putStrLn version
 
-    ["run", path] -> do
+    ["run", "-d",      path] -> run path True
+    ["run", "--debug", path] -> run path True
+    ["run", "-d"]            -> do putStrLn usage; exitFailure
+    ["run", "--debug"]       -> do putStrLn usage; exitFailure
+    ["run",            path] -> run path False
+    ["run"]                  -> do putStrLn usage; exitFailure
+
+    ["exec", "-d",      program] -> void $ exec program =<< extendScope =<< debugScope =<< loadPrelude
+    ["exec", "--debug", program] -> void $ exec program =<< extendScope =<< debugScope =<< loadPrelude
+    ["exec", "-d"]               -> do putStrLn usage; exitFailure
+    ["exec", "--debug"]          -> do putStrLn usage; exitFailure
+    ["exec",            program] -> void $ exec program =<< extendScope =<< loadPrelude
+    ["exec"]                     -> do putStrLn usage; exitFailure
+
+    _ -> do putStrLn usage; exitFailure
+  where
+    run :: String -> Bool -> IO ()
+    run path False = do
       program <- readFile path
       void $ exec program =<< extendScope =<< loadPrelude
+    run path True = do
+      program <- readFile path
+      void $ exec program =<< extendScope =<< debugScope =<< loadPrelude
 
-    _ -> do
-      putStrLn usage
-      exitFailure
+    debugScope :: State -> IO State
+    debugScope prelude = extendScope prelude >>= \s -> return $ foldr (\(k,v) s -> setBinding k v s) s bindings
+      where
+        bindings = [
+          ("PrStack", VIOFn (\st@(State { stack = s })      -> do print s; return st)),
+          ("PrType",  VIOFn (\st@(State { stack = (x:xs) }) -> do putStrLn . typeName $ x; return st)),
+          ("PrState", VIOFn (\st -> do print st; return st))
+          ]
 
 -- | Usage string printed when incorrect arguments are given.
 usage = unlines [
-  "Usage: adduce [flags] <subcommand>\n",
+  "Usage: adduce <subcommand> [flags] <subcommand args>\n",
   "Flags:",
   "  --version, -v \tShow the current version",
+  "  --debug, -d   \tRun with debug output functions enabled",
   "",
   "Subcommands:",
-  "  run <path>    \tRun an Adduce program from a .adc file"
+  "  run <path>    \tRun an Adduce program from a .adc file",
+  "  exec <program>\tRun an Adduce program from a string"
   -- "  test      \tRun programs in ./test, checking their output against matching .out files"
   ]
 
