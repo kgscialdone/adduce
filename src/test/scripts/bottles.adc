@@ -1,7 +1,7 @@
 ; 99 Bottles
 
-Def Plural      (Let N. If $ N (==) 1 then ''    else 's').
-Def Punctuation (Let N. If $ N (==) 0 then '...' else '!').
+Def Plural      (Let N. If $ N `== 1 then ''    else 's').
+Def Punctuation (Let N. If $ N `== 0 then '...' else '!').
 
 For each of a Reversed Range from 1 to 100 do (
   Let a Number be from the range.
