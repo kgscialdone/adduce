@@ -58,9 +58,11 @@ execCli = \case
       return $ foldr (\(k,v) s -> setBinding k v s) s bindings
       where
         bindings = [
-          ("PrStack", VIOFn (\st@(State { stack = s })      -> do print s; return st)),
-          ("PrType",  VIOFn (\st@(State { stack = (x:xs) }) -> do putStrLn . typeName $ x; return st)),
-          ("PrState", VIOFn (\st -> do print st; return st))
+          ("PrStack", VIOFn (\st@(State { stack = s }) -> do print s; return st)),
+          ("PrState", VIOFn (\st                       -> do print st; return st)),
+          ("PrType",  VIOFn (\case
+            st@(State { stack = (x:xs) }) -> do putStrLn . typeName $ x; return st
+            st                            -> return $ push (VErr "Expected 1 value") st))
           ]
 
     usage = unlines [
