@@ -26,20 +26,17 @@ defaultState = newState >>= \s -> return $
   foldr (\(k,v) s -> setBinding k v s) s bindings
   where
     bindings = [
-      ("True",  VBool True),
-      ("False", VBool False),
-
       ("Print", VIOFn B.print),
       ("Do",    VIOFn B.doo),
       ("If",    VFunc B.iff),
       ("List",  VIOFn B.list),
       ("While", VIOFn B.while),
 
-      ("==", VFunc B.eq),
-      ("&&", VFunc B.and),
-      ("||", VFunc B.or),
-      ("!",  VFunc B.not),
-      ("<=", VFunc B.le),
+      ("==",  VFunc B.eq),
+      ("<=",  VFunc B.le),
+      ("And", VFunc B.and),
+      ("Or",  VFunc B.or),
+      ("Not", VFunc B.not),
 
       ("+", VFunc B.add),
       ("-", VFunc B.sub),

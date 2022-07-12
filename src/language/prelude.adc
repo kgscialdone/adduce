@@ -1,4 +1,7 @@
 
+Let True  Not Not 1.
+Let False Not Not 0.
+
 Alias Add +.
 Alias Multiply *.
 Alias Subtract -.
@@ -6,14 +9,11 @@ Alias Divide /.
 Alias Modulo %.
 Alias Power ^.
 
-Def != (! ==).
+Def != (Not ==).
 Alias Equal ==.
 Alias Eq ==.
 Alias NotEqual !=.
 Alias NotEq !=.
-Alias And &&.
-Alias Or ||.
-Alias Not !.
 
 Def Drop (Let _).
 Def Swap (Let X. Let Y. Y X).
@@ -21,8 +21,8 @@ Def Twin (Let X. X X).
 Alias \ Swap.
 
 Def >= (<= \).
-Def > (Let X. Let Y. && != X Y >= X Y).
-Def < (Let X. Let Y. && != X Y <= X Y).
+Def > (Let X. Let Y. And != X Y >= X Y).
+Def < (Let X. Let Y. And != X Y <= X Y).
 Alias Greater >.
 Alias GreaterOrEq >=.
 Alias Lesser <.
@@ -35,7 +35,7 @@ Def Decrement (- \ 1).
 Alias Inc Increment.
 Alias Dec Decrement.
 
-Def Unless (If !).
+Def Unless (If Not).
 Def $ (Do \).
 
 ; Run the given Body for each value in Items.
