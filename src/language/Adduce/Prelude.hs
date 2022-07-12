@@ -9,13 +9,13 @@ import Data.Maybe (fromMaybe)
 import Adduce.Types
 import Adduce.Interpreter
 import qualified Adduce.Builtins as B
-import Adduce.Utils
+import Utils
 
 import Paths_adduce
 
 -- | Load the prelude file and return its environment.
 loadPrelude = do
-  prelude <- readFile =<< getDataFileName "src/prelude.adc"
+  prelude <- readFile =<< getDataFileName "src/language/prelude.adc"
   prelude <- exec prelude =<< extendScope =<< defaultState
   return $ fromMaybe (error "Failed to load prelude") prelude
 

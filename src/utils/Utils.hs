@@ -1,6 +1,6 @@
 
 -- | Various utility functions used throughout the interpreter.
-module Adduce.Utils where
+module Utils where
 
 import Control.Monad (foldM)
 import Data.Char (isSpace)
@@ -27,7 +27,7 @@ foldPartial f b = fromEither . foldM f b
 
 -- | IO-wrapped partial fold operation which terminates early if the fold function returns an `IO Left`.
 foldPartialIO :: (b -> a -> IO (Either b b)) -> b -> [a] -> IO b
-foldPartialIO f = foldM (\b a -> fromEither `fmap` f b a)
+foldPartialIO f = foldM (\b a -> fromEither <$> f b a)
 
 -- | Specialized version of `Data.Bifunctor.bimap` for applying the same function to both arguments.
 bimapBoth :: Bifunctor p => (a -> b) -> p a a -> p b b

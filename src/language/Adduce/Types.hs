@@ -7,7 +7,7 @@ import Data.List (intercalate)
 import Data.Map as Map (Map, lookup, insert, empty, keys, elems, delete)
 import Data.Unique (Unique, newUnique, hashUnique)
 
-import Adduce.Utils
+import Utils
 
 type Statement    = [Token]
 type ErrorHandler = String -> State -> IO State
@@ -39,7 +39,7 @@ instance Show State where
 
 newState :: IO State
 newState = do
-  newId <- ScopeId `fmap` newUnique
+  newId <- ScopeId <$> newUnique
   return $ State { stack = [], scopeId = newId, bindings = empty, parents = empty, errorhs = empty }
 
 push :: Value -> State -> State
@@ -71,7 +71,7 @@ getErrorH state = Map.lookup (scopeId state) (errorhs state)
 
 extendScope :: State -> IO State
 extendScope state = do
-  newId <- ScopeId `fmap` newUnique
+  newId <- ScopeId <$> newUnique
   return $ state { scopeId = newId, parents = Map.insert newId (scopeId state) (parents state) }
 
 findParent :: (State -> Bool) -> State -> Maybe State

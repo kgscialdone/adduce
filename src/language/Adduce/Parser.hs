@@ -9,7 +9,7 @@ import Data.Maybe (isJust, fromJust, mapMaybe)
 import Data.Either (isLeft, fromLeft, fromRight)
 
 import Adduce.Types
-import Adduce.Utils
+import Utils
 
 -- | Parse an Adduce program from a string, returning a list of `Statement`s.
 parseString :: String -> Either [String] [Statement]

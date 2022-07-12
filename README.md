@@ -28,7 +28,7 @@ For each of a Reversed Range from 1 to 100 do (
 ).
 ```
 
-Documentation is WIP. For more examples of Adduce's syntax, see [`src/prelude.adc`](src/prelude.adc) or the [`tests`](tests) folder.
+Documentation is WIP. For more examples of Adduce's syntax, see [`src/language/prelude.adc`](src/language/prelude.adc) or the [`src/test/scripts`](src/test/scripts) folder.
 
 Adduce was heavily inspired by [Cognate](https://github.com/cognate-lang/cognate), and borrows much of its syntax and
 semantics from it. The two differ mainly in implementation and goals; for example, Cognate is a compiled language, while
@@ -36,7 +36,7 @@ Adduce is interpreted. However, compatibility with Cognate programs is not a goa
 different languages, and will likely diverge over time rather than converge.
 
 Adduce is implemented in Haskell, and strives for a minimal set of core functions and keywords. The majority of the language's
-default functionality is defined in a [prelude file](src/prelude.adc) written in Adduce itself.
+default functionality is defined in a [prelude file](src/language/prelude.adc) written in Adduce itself.
 
 ## Installation
 

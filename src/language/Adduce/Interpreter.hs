@@ -10,7 +10,7 @@ import Data.Function ((&))
 
 import Adduce.Types
 import Adduce.Parser
-import Adduce.Utils
+import Utils
 
 -- | Execute an Adduce program from a `String` of its source code and a parent `Env`.
 --   Returns the resulting `Env` after execution, or `Nothing` if an error occurred.
@@ -36,7 +36,7 @@ interpret statements state =
   where
     interpret' :: Statement -> State -> IO State
     interpret' stmt state@(State { stack = stk }) =
-      fromEither `fmap` handleError' (\s _ -> interpret'' s) state stmt
+      fromEither <$> handleError' (\s _ -> interpret'' s) state stmt
       where
         interpret'' :: Statement -> IO State
         interpret'' (IntLit x : xs)  = interpret' xs $ push (VInt x) state
@@ -110,7 +110,7 @@ getDesuffixed name state = getBinding name state ?: getDesuffixed'
 -- | Attempt to handle a Catchable error.
 --   Searches the current `Env` for an error handler, and returns the resulting state.
 handleError :: State -> IO State
-handleError s = fromEither `fmap` handleError' (\a b -> return b) s []
+handleError s = fromEither <$> handleError' (\a b -> return b) s []
 
 -- | Attempt to handle a Catchable error.
 --   Searches the current `Env` for an error handler, calling a given continuation function
@@ -124,5 +124,5 @@ handleError' c state s = case (stack state, getErrorH state) of
   (VErr e : xs, Just eh) -> eh e state >>= \newState -> case stack newState of
     (y@(VErr _) : _) -> return $ Left  $ retop y $ withoutErrorH state
     _                -> return $ Right $ restack xs state
-  (_, _)                 -> Right `fmap` c s state
+  (_, _)                 -> Right <$> c s state
 
