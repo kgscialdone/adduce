@@ -4,7 +4,7 @@ module Adduce.Types where
 
 import Control.Exception (Exception)
 import Data.List (intercalate)
-import Data.Map as Map (Map, lookup, insert, empty, keys, elems, delete)
+import Data.Map as Map (Map, lookup, insert, empty, keys, elems, delete, member)
 import Data.Unique (Unique, newUnique, hashUnique)
 
 import Utils
@@ -13,6 +13,7 @@ type Statement    = [Token]
 type ErrorHandler = String -> State -> IO State
 
 newtype ScopeId = ScopeId Unique deriving (Eq, Ord)
+type BindingKey = (ScopeId, String)
 
 instance Show ScopeId where
   show (ScopeId uniq) = show $ hashUnique uniq
@@ -20,7 +21,7 @@ instance Show ScopeId where
 data State = State
   { stack    :: [Value]
   , scopeId  :: ScopeId
-  , bindings :: Map (ScopeId, String) Value
+  , bindings :: Map BindingKey Value
   , parents  :: Map ScopeId ScopeId
   , errorhs  :: Map ScopeId (String -> State -> IO State)
   }
@@ -56,6 +57,10 @@ getBinding name state = Map.lookup (scopeId state, name) (bindings state) ?: (ge
 
 setBinding :: String -> Value -> State -> State
 setBinding name value state = state { bindings = Map.insert (scopeId state, name) value (bindings state) }
+
+findBinding :: String -> State -> Maybe BindingKey
+findBinding name state | Map.member (scopeId state, name) (bindings state) = Just (scopeId state, name)
+findBinding name state = getParent state >>= findBinding name
 
 getParent :: State -> Maybe State
 getParent state = Map.lookup (scopeId state) (parents state) >>= \p -> Just state { scopeId = p }
@@ -102,17 +107,19 @@ data Value = VInt Integer
            | VErr String
            | VFunc ([Value] -> [Value])
            | VIOFn (State   -> IO State)
+           | VAlias BindingKey
 
 instance Show Value where
-  show (VInt x)     = show x
-  show (VFlt x)     = show x
-  show (VStr x)     = x
-  show (VBool x)    = show x
-  show l@(VList x)  = prettyPrint l
-  show (VBlock x _) = "<block (" ++ intercalate ", " (map show $ intercalate [StmtEnd] x) ++ ")>"
-  show (VErr x)     = "Error: " ++ x
-  show (VFunc _)    = "<func>"
-  show (VIOFn _)    = "<iofn>"
+  show (VInt x)       = show x
+  show (VFlt x)       = show x
+  show (VStr x)       = x
+  show (VBool x)      = show x
+  show l@(VList x)    = prettyPrint l
+  show (VBlock x _)   = "<block (" ++ intercalate ", " (map show $ intercalate [StmtEnd] x) ++ ")>"
+  show (VErr x)       = "Error: " ++ x
+  show (VFunc _)      = "<func>"
+  show (VIOFn _)      = "<iofn>"
+  show (VAlias (s,n)) = "<alias " ++ show s ++ ":" ++ n ++ ">"
 
 instance Eq Value where
   VInt x  == VInt y  = x == y

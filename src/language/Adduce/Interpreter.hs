@@ -77,28 +77,33 @@ interpret statements state =
           tch' _ (_:_) = interpret' xs $ retop (VBool False) state
           tch' _ _     = interpret' xs $ push (VErr "Expected 1 value") state
 
-        interpret'' (Form "Alias" [Ident a, Ident b] : xs) = case getDesuffixed b state of
-          Just x  -> interpret' xs $ setBinding a x state
+        interpret'' (Form "Alias" [Ident a, Ident b] : xs) = case findDesuffixed b state of
+          Just b  -> interpret' xs $ setBinding a (VAlias b) state
           Nothing -> interpret' xs $ push (VErr ("Unknown symbol `" ++ b ++ "`")) state
 
-        interpret'' (Ident x : xs) = case getDesuffixed x state of
-          Just (VFunc f) -> interpret' xs $ restack (f stk) state
-          Just (VIOFn f) -> interpret' xs =<< f state
-          Just x         -> interpret' xs $ push x state
-          Nothing        -> interpret' xs $ push (VErr ("Unknown symbol `" ++ x ++ "`")) state
+        interpret'' (Ident x : xs) = resolveIdent x state where
+          resolveIdent x rst = case getDesuffixed x rst of
+            Just (VAlias (s,n)) -> resolveIdent n rst { scopeId = s }
+            Just (VFunc f)      -> interpret' xs $ restack (f stk) state
+            Just (VIOFn f)      -> interpret' xs =<< f state
+            Just x              -> interpret' xs $ push x state
+            Nothing             -> interpret' xs $ push (VErr ("Unknown symbol `" ++ x ++ "`")) state
 
         interpret'' (x:xs) = error $ "Internal error: Unhandled token " ++ show x
         interpret'' []     = return state
 
--- | Search a `State` for a given binding, performing desuffixing if needed.
-getDesuffixed :: String -> State -> Maybe Value
-getDesuffixed name state = getBinding name state ?: getDesuffixed'
+getDesuffixed = doDesuffixed getBinding
+findDesuffixed = doDesuffixed findBinding
+
+-- | Search a `State` for a given binding, performing desuffixing if needed, by applying the given search function.
+doDesuffixed :: (String -> State -> Maybe a) -> String -> State -> Maybe a
+doDesuffixed f name state = f name state ?: doDesuffixed' f
   where
-    getDesuffixed' = ["ing", "ion", "ed", "er", "es", "d", "r", "s"] &
+    doDesuffixed' f = ["ing", "ion", "ed", "er", "es", "d", "r", "s"] &
       filter (`isSuffixOf` name) &.
       map (\s -> dropEnd (length s) name) &.
       foldr expandOptions [[],[],[],[]] &. concat &.
-      map (flip getBinding state) &.
+      map (flip f state) &.
       foldl (?:) Nothing
 
     expandOptions name [i,j,k,l] = [
