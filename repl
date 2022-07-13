@@ -1,0 +1,3 @@
+#!/bin/sh
+ghci -isrc/cli:src/language:src/utils Main
+
