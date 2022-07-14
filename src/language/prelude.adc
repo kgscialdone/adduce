@@ -84,27 +84,13 @@ Def Product (Let Items List!. For Items `* from 1).   ; Returns the product of a
 Def Repeat (
   Let Value be from the stack.
   Let Times Int!.
-  List (Drop While (has a Greater Times than Twin the index) (
-    Let Index be from the stack.
-    add the Value to the list.
-    Increment the Index.
-  ) 0).
+  List (Drop While (> Times Twin) (Value. Inc Swap) 0).
 ).
 
 ; Reverses a list.
 Def Reverse (Let Items. List (For Items ())).
 
 ; Applies a given Body to each of the Items in a List, returning a new List of the results.
-; Adds the index below the item in the stack and expects it to be used; use Map if it's not needed.
-Def MapI (
-  Def Body.
-  Let Items List!.
-  Reverse List (Drop While (has a Greater Length of Items than the Twin index) (
-    Let Index be from the stack.
-    run the Body over Get Index from Items, and Index.
-    Increment the Index.
-  ) 0).
-).
 Def Map (Def Body. MapI (Body Drop Swap)).
 
 ; Create a List of numbers between a LowerBound (inclusive) and UpperBound (exclusive).

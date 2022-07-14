@@ -3,6 +3,8 @@
 -- | Definitions of functions used in `Adduce.Prelude.defaultState`.
 module Adduce.Builtins where
 
+import Control.Monad (foldM)
+
 import Adduce.Types
 import Adduce.Interpreter
 
@@ -25,13 +27,18 @@ list state@(State { stack = (b@(VBlock _ _) : xs) }) = do
     Nothing -> return $ restack (VList (stack ns) : xs) state
 list state = return $ raiseError "Expected a block" state
 
-loop state@(State { stack = (b@(VBlock _ _) : xs) }) = do
-  ns <- interpretBlock b $ restack xs state
-  case raised ns of
-    Just "$_adduce_internal__BREAK_" -> return $ restack (stack ns) state
-    Just e                           -> return $ raiseError e $ restack xs state
-    Nothing                          -> loop $ restack (b : stack ns) state
+loop state@(State { stack = (b@(VBlock _ _) : xs) }) = loop' $ restack xs state where
+  loop' st = do
+    ns <- interpretBlock b st
+    case raised ns of
+      Just "$_adduce_internal__BREAK_" -> return $ restack (stack ns) st
+      Just e                           -> return $ raiseError e $ restack xs st
+      Nothing                          -> loop' $ restack (stack ns) st
 loop state = return $ raiseError "Expected a block" state
+
+mapI state@(State { stack = (b@(VBlock _ _) : VList l : xs) }) = do
+  nl <- foldM (\s (i,x) -> interpretBlock b $ restack (x : VInt i : stack s) s) (restack [] state) $ zip (map toInteger [0..length l]) l
+  return $ restack (VList (reverse $ stack nl) : xs) state
 
 raise state@(State { stack = (VStr x : xs) }) = return $ restack xs $ raiseError x state
 raise state                                   = return $ raiseError "Expected a string" state

@@ -34,6 +34,7 @@ defaultState = newState >>= \s -> return $
       ("List",  VIOFn B.list),
 
       ("Loop", VIOFn B.loop),
+      ("MapI", VIOFn B.mapI),
 
       ("==",  VFunc B.eq),
       ("<=",  VFunc B.le),
