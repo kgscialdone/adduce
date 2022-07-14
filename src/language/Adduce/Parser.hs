@@ -148,6 +148,15 @@ verify = verify' True
     verify' False (Form "Alias" _ : _) = Just "`Alias` cannot appear in the middle of a statement"
     verify' False (Form "Let" _ : _)   = Just "`Let` cannot appear in the middle of a statement"
     verify' False (Form "Def" _ : _)   = Just "`Def` cannot appear in the middle of a statement"
+    verify' True (Form "Alias" [Ident x,_] : xs)
+      | x `elem` reservedNames = Just $ "Cannot redefine the reserved name `" ++ unintern x ++ "`"
+      | otherwise              = verify' False xs
+    verify' True (Form "Let" [Ident x] : xs)
+      | x `elem` reservedNames = Just $ "Cannot redefine the reserved name `" ++ unintern x ++ "`"
+      | otherwise              = verify' False xs
+    verify' True (Form "Def" [Ident x] : xs)
+      | x `elem` reservedNames = Just $ "Cannot redefine the reserved name `" ++ unintern x ++ "`"
+      | otherwise              = verify' False xs
     verify' _ (Block ss : xs) = let res = filter isJust $ map verify ss in case length res of
       0 -> Nothing
       _ -> Just $ unlines $ map fromJust res
@@ -155,5 +164,7 @@ verify = verify' True
     verify' _ (x:xs)           = verify' False xs
     verify' _ []               = Nothing
 
-    formNames = map (intern :: String -> InternedString) ["Let","Def","Alias",":","?:"]
+-- | List of reserved identifier names that cannot be used by Let/Def/Alias
+reservedNames :: [InternedString]
+reservedNames = map intern ["Let","Def","Alias","Catch"]
 
