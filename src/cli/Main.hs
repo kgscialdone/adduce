@@ -1,6 +1,8 @@
 -- Adduce Interpreter v0.1.0
 -- by Katrina Scialdone
 
+{-# LANGUAGE LambdaCase #-}
+
 module Main where
 
 import Control.Monad (void)
