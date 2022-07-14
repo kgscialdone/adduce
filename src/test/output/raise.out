@@ -1,8 +1,8 @@
-Error: Same level
-Error: Same level again
-Error: Lower level
+Caught: Same level
+Caught: Same level again
+Caught: Lower level
 Caught by the inner catch
 This should execute
-Error: Some other message
+Caught: Some other message
 Inner catch with re-raise
-Error: It works!
+Caught: It works!

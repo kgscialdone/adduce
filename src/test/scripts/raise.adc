@@ -3,7 +3,7 @@
 Do (
   Catch (
     Let Message be the error message.
-    Print the Concatenation of 'Error: ' with Message.
+    Print the Concatenation of 'Caught: ' with Message.
   ).
 
   Raise "Same level".
