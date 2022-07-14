@@ -37,7 +37,7 @@ library adduce-utils
 executable adduce
     import:         shared-properties
     hs-source-dirs: src/cli
-    build-depends:  adduce
+    build-depends:  adduce, intern
     main-is:        Main.hs
 
 test-suite test-scripts
