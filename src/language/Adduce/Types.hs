@@ -6,6 +6,8 @@ import Control.Exception (Exception)
 import Data.List (intercalate)
 import Data.Map as Map (Map, lookup, insert, empty, keys, elems, delete, member)
 import Data.Unique (Unique, newUnique, hashUnique)
+import Data.Interned (Interned, unintern)
+import Data.Interned.String (InternedString)
 
 import Utils
 
@@ -13,7 +15,7 @@ type Statement    = [Token]
 type ErrorHandler = String -> State -> IO State
 
 newtype ScopeId = ScopeId Unique deriving (Eq, Ord)
-type BindingKey = (ScopeId, String)
+type BindingKey = (ScopeId, InternedString)
 
 instance Show ScopeId where
   show (ScopeId uniq) = show $ hashUnique uniq
@@ -52,13 +54,13 @@ retop v state = push v state { stack = tail $ stack state }
 restack :: [Value] -> State -> State
 restack stack state = state { stack = stack }
 
-getBinding :: String -> State -> Maybe Value
+getBinding :: InternedString -> State -> Maybe Value
 getBinding name state = Map.lookup (scopeId state, name) (bindings state) ?: (getBinding name =<< getParent state)
 
-setBinding :: String -> Value -> State -> State
+setBinding :: InternedString -> Value -> State -> State
 setBinding name value state = state { bindings = Map.insert (scopeId state, name) value (bindings state) }
 
-findBinding :: String -> State -> Maybe BindingKey
+findBinding :: InternedString -> State -> Maybe BindingKey
 findBinding name state | Map.member (scopeId state, name) (bindings state) = Just (scopeId state, name)
 findBinding name state = getParent state >>= findBinding name
 
@@ -87,7 +89,7 @@ findParent f state
 
 -- | The smallest semantically meaningful chunk of an Adduce program.
 data Token = Form String [Token]
-           | Ident String
+           | Ident InternedString
            | Block [Statement]
            | IntLit Integer
            | FltLit Double
@@ -114,12 +116,12 @@ instance Show Value where
   show (VFlt x)       = show x
   show (VStr x)       = x
   show (VBool x)      = show x
-  show l@(VList x)    = prettyPrint l
+  show l@(VList _)    = prettyPrint l
   show (VBlock x _)   = "<block (" ++ intercalate ", " (map show $ intercalate [StmtEnd] x) ++ ")>"
   show (VErr x)       = "Error: " ++ x
   show (VFunc _)      = "<func>"
   show (VIOFn _)      = "<iofn>"
-  show (VAlias (s,n)) = "<alias " ++ show s ++ ":" ++ n ++ ">"
+  show (VAlias (s,n)) = "<alias " ++ show s ++ ":" ++ unintern n ++ ">"
 
 instance Eq Value where
   VInt x  == VInt y  = x == y

@@ -6,6 +6,7 @@
 module Main where
 
 import Control.Monad (void)
+import Data.Interned (intern)
 
 import System.Environment
 import System.Exit
@@ -55,7 +56,7 @@ execCli = \case
 
     debugScope :: IO State
     debugScope = loadPrelude >>= extendScope >>= \s ->
-      return $ foldr (\(k,v) s -> setBinding k v s) s bindings
+      return $ foldr (\(k,v) s -> setBinding k v s) s $ map (\(a,b) -> (intern a, b)) bindings
       where
         bindings = [
           ("PrStack", VIOFn (\st@(State { stack = s }) -> do print s; return st)),

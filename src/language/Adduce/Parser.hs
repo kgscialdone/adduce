@@ -7,6 +7,8 @@ import Data.Char (isDigit, isLower, isSpace)
 import Data.List (groupBy, partition)
 import Data.Maybe (isJust, fromJust, mapMaybe)
 import Data.Either (isLeft, fromLeft, fromRight)
+import Data.Interned (intern, unintern)
+import Data.Interned.String (InternedString)
 
 import Adduce.Types
 import Utils
@@ -98,10 +100,10 @@ parse = parse' &. groupBy groupStatements &. map (filter filterEnds) &. filter (
     parse'' (".":ts)       = StmtEnd : parse'' ts
     parse'' (('\'':cs):ts) = StrLit (init cs) : parse'' ts
     parse'' (('\"':cs):ts) = StrLit (init cs) : parse'' ts
-    parse'' (('`':cs):ts)  = Block [[Ident cs]] : parse'' ts
+    parse'' (('`':cs):ts)  = Block [[Ident (intern cs)]] : parse'' ts
 
-    parse'' (")":ts)       = Invalid "Unmatched )" : parse'' ts
-    parse'' ("(":ts)       = let (inner,rest) = consumeParens ts in case length inner of
+    parse'' (")":ts) = Invalid "Unmatched )" : parse'' ts
+    parse'' ("(":ts) = let (inner,rest) = consumeParens ts in case length inner of
       0 -> Invalid "Unmatched (" : parse'' (map snd rest)
       _ -> case last inner of
         (1,")") -> Block (parse $ map (Right . snd) $ init inner) : parse'' (map snd rest)
@@ -110,18 +112,18 @@ parse = parse' &. groupBy groupStatements &. map (filter filterEnds) &. filter (
     parse'' [f]        | f == "Alias" = [Invalid $ "`"++f++"` must be followed by 2 valid identifiers"]
     parse'' [f,_]      | f == "Alias" = [Invalid $ "`"++f++"` must be followed by 2 valid identifiers"]
     parse'' (f:a:b:ts) | f == "Alias" = let pt = parse'' [a,b] in case pt of
-      [Ident ia, Ident ib] -> Form f [Ident ia, Ident ib] : parse'' ts
-      _                    -> [Invalid $ "`"++f++"` must be followed by 2 valid identifiers"]
+      is@[Ident _, Ident _] -> Form f is : parse'' ts
+      _                     -> [Invalid $ "`"++f++"` must be followed by 2 valid identifiers"]
 
     parse'' [f]      | f `elem` ["Let","Def",":","?:"] = [Invalid $ "`"++f++"` must be followed by a valid identifier"]
     parse'' (f:t:ts) | f `elem` ["Let","Def",":","?:"] = let pt = parse'' [t] in case pt of
-      [Ident it] -> Form f [Ident it] : parse'' ts
-      _          -> [Invalid $ "`"++f++"` must be followed by a valid identifier"]
+      is@[Ident _] -> Form f is : parse'' ts
+      _            -> [Invalid $ "`"++f++"` must be followed by a valid identifier"]
 
     parse'' (t:ts)
       | isJust (readMaybe t :: Maybe Integer) = IntLit (read t :: Integer) : parse'' ts
       | isJust (readMaybe t :: Maybe Double)  = FltLit (read t :: Double)  : parse'' ts
-      | otherwise                             = Ident t : parse'' ts
+      | otherwise                             = Ident (intern t) : parse'' ts
     parse'' []                                = []
 
     consumeParens ts = span (fst &. (> 0)) $ zip (getNestDepth ts) ts
@@ -143,10 +145,10 @@ verify = verify' True
     verify' False (Form "Def" _ : _)   = Just "`Def` cannot appear in the middle of a statement"
     verify' _ (Form ":" [Ident x] : xs)
       | x `elem` typeNames = verify' False xs
-      | otherwise          = Just $ "Expected a valid type name, but got `" ++ x ++ "`"
+      | otherwise          = Just $ "Expected a valid type name, but got `" ++ unintern x ++ "`"
     verify' _ (Form "?:" [Ident x] : xs)
       | x `elem` typeNames = verify' False xs
-      | otherwise          = Just $ "Expected a valid type name, but got `" ++ x ++ "`"
+      | otherwise          = Just $ "Expected a valid type name, but got `" ++ unintern x ++ "`"
     verify' _ (Block ss : xs) = let res = filter isJust $ map verify ss in case length res of
       0 -> Nothing
       _ -> Just $ unlines $ map fromJust res
@@ -154,6 +156,6 @@ verify = verify' True
     verify' _ (x:xs)           = verify' False xs
     verify' _ []               = Nothing
 
-    formNames = ["Let","Def","Alias",":","?:"]
-    typeNames = ["Int","Float","Bool","String","List","Block"]
+    formNames = map (intern :: String -> InternedString) ["Let","Def","Alias",":","?:"]
+    typeNames = map (intern :: String -> InternedString) ["Int","Float","Bool","String","List","Block"]
 

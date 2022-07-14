@@ -7,6 +7,8 @@ import Control.Exception (catch)
 import Data.List (reverse, isSuffixOf, group)
 import Data.Maybe (isJust, fromJust)
 import Data.Function ((&))
+import Data.Interned (intern, unintern)
+import Data.Interned.String (InternedString)
 
 import Adduce.Types
 import Adduce.Parser
@@ -43,6 +45,7 @@ interpret statements state =
         interpret'' (FltLit x : xs)  = interpret' xs $ push (VFlt x) state
         interpret'' (StrLit x : xs)  = interpret' xs $ push (VStr x) state
         interpret'' (BoolLit x : xs) = interpret' xs $ push (VBool x) state
+        -- interpret'' (SymLit x : xs)  = interpret' xs $ push (VSym x) state
         interpret'' (Block ss : xs)  = do
           newState <- extendScope state
           interpret' xs $ push (VBlock ss (scopeId newState)) newState { scopeId = scopeId state }
@@ -57,17 +60,17 @@ interpret statements state =
             return $ restack (stack ns) s)) $ restack ys state
           def' _                   = interpret' xs $ push (VErr "Expected a block") state
 
-        interpret'' (Form ":" [Ident x] : xs) = tch' x stk where
+        interpret'' (Form ":" [Ident x] : xs) = tch' (unintern x) stk where
           tch' "Int"    (VInt y : _)     = interpret' xs state
           tch' "Float"  (VFlt y : _)     = interpret' xs state
           tch' "String" (VStr y : _)     = interpret' xs state
           tch' "Bool"   (VBool y : _)    = interpret' xs state
           tch' "List"   (VList y : _)    = interpret' xs state
           tch' "Block"  (VBlock y z : _) = interpret' xs state
-          tch' _ (y:_) = interpret' xs $ push (VErr ("Type error, expected `"++x++"` but got `"++typeName y++"`")) state
+          tch' _ (y:_) = interpret' xs $ push (VErr ("Type error, expected `" ++ unintern x ++ "` but got `" ++ typeName y ++ "`")) state
           tch' _ _     = interpret' xs $ push (VErr "Expected 1 value") state
 
-        interpret'' (Form "?:" [Ident x] : xs) = tch' x stk where
+        interpret'' (Form "?:" [Ident x] : xs) = tch' (unintern x) stk where
           tch' "Int"    (VInt y : _)     = interpret' xs $ retop (VBool True) state
           tch' "Float"  (VFlt y : _)     = interpret' xs $ retop (VBool True) state
           tch' "String" (VStr y : _)     = interpret' xs $ retop (VBool True) state
@@ -79,7 +82,7 @@ interpret statements state =
 
         interpret'' (Form "Alias" [Ident a, Ident b] : xs) = case findDesuffixed b state of
           Just b  -> interpret' xs $ setBinding a (VAlias b) state
-          Nothing -> interpret' xs $ push (VErr ("Unknown symbol `" ++ b ++ "`")) state
+          Nothing -> interpret' xs $ push (VErr ("Unknown symbol `" ++ unintern b ++ "`")) state
 
         interpret'' (Ident x : xs) = resolveIdent x state where
           resolveIdent x rst = case getDesuffixed x rst of
@@ -87,7 +90,7 @@ interpret statements state =
             Just (VFunc f)      -> interpret' xs $ restack (f stk) state
             Just (VIOFn f)      -> interpret' xs =<< f state
             Just x              -> interpret' xs $ push x state
-            Nothing             -> interpret' xs $ push (VErr ("Unknown symbol `" ++ x ++ "`")) state
+            Nothing             -> interpret' xs $ push (VErr ("Unknown symbol `" ++ unintern x ++ "`")) state
 
         interpret'' (x:xs) = error $ "Internal error: Unhandled token " ++ show x
         interpret'' []     = return state
@@ -96,14 +99,15 @@ getDesuffixed = doDesuffixed getBinding
 findDesuffixed = doDesuffixed findBinding
 
 -- | Search a `State` for a given binding, performing desuffixing if needed, by applying the given search function.
-doDesuffixed :: (String -> State -> Maybe a) -> String -> State -> Maybe a
+doDesuffixed :: (InternedString -> State -> Maybe a) -> InternedString -> State -> Maybe a
 doDesuffixed f name state = f name state ?: doDesuffixed' f
   where
+    doDesuffixed' :: (InternedString -> State -> Maybe a) -> Maybe a
     doDesuffixed' f = ["ing", "ion", "ed", "er", "es", "d", "r", "s"] &
-      filter (`isSuffixOf` name) &.
-      map (\s -> dropEnd (length s) name) &.
+      filter (`isSuffixOf` (unintern name)) &.
+      map (\s -> dropEnd (length s) (unintern name)) &.
       foldr expandOptions [[],[],[],[]] &. concat &.
-      map (flip f state) &.
+      map (flip f state . intern) &.
       foldl (?:) Nothing
 
     expandOptions name [i,j,k,l] = [

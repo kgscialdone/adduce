@@ -16,7 +16,7 @@ common shared-properties
 library
     import:         shared-properties
     hs-source-dirs: src/language
-    build-depends:  adduce-utils
+    build-depends:  adduce-utils, intern
     exposed-modules:
         Adduce.Interpreter
         Adduce.Prelude

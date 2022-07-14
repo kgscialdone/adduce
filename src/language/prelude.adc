@@ -44,7 +44,7 @@ Def Breakpoint (
   Def Body. Body.
 ).
 
-Def Loop (Def Body. Breakpoint (Loop! `Body)).
+Def Loop (Def Body. Breakpoint ($_loop `Body)).
 
 Def While (
   Def Cond. Def Body.

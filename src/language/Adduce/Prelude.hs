@@ -5,6 +5,7 @@ module Adduce.Prelude where
 import Control.Exception (throw)
 import Data.Map as Map (fromList)
 import Data.Maybe (fromMaybe)
+import Data.Interned (intern)
 
 import Adduce.Types
 import Adduce.Interpreter
@@ -23,14 +24,15 @@ loadPrelude = do
 --   This is seperate from the external prelude file, which will be loaded into it later.
 defaultState = newState >>= \s -> return $
   withErrorH (\e st -> return $ throw $ AdduceError e) $
-  foldr (\(k,v) s -> setBinding k v s) s bindings
+  foldr (\(k,v) s -> setBinding k v s) s $ map (\(a,b) -> (intern a, b)) bindings
   where
     bindings = [
       ("Print", VIOFn B.print),
       ("Do",    VIOFn B.doo),
       ("If",    VFunc B.iff),
       ("List",  VIOFn B.list),
-      ("Loop!", VIOFn B.loop),
+
+      ("$_loop", VIOFn B.loop),
 
       ("==",  VFunc B.eq),
       ("<=",  VFunc B.le),
