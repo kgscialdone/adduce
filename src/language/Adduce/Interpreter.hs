@@ -54,10 +54,8 @@ interpret statements state =
           let' _      = interpret' xs $ push (VErr "Expected 1 value") state
 
         interpret'' (Form "Def" [Ident x] : xs) = def' stk where
-          def' (VBlock ss be : ys) = interpret' xs $ setBinding x (VIOFn (\s -> do
-            ns <- interpret ss s { scopeId = be }
-            return $ restack (stack ns) s)) $ restack ys state
-          def' _                   = interpret' xs $ push (VErr "Expected a block") state
+          def' (b@(VBlock _ _) : ys) = interpret' xs $ setBinding x (VIOFn (\s -> interpretBlock b s)) $ restack ys state
+          def' _                     = interpret' xs $ push (VErr "Expected a block") state
 
         interpret'' (Form "Alias" [Ident a, Ident b] : xs) = case findDesuffixed b state of
           Just b  -> interpret' xs $ setBinding a (VAlias b) state
@@ -73,6 +71,11 @@ interpret statements state =
 
         interpret'' (x:xs) = error $ "Internal error: Unhandled token " ++ show x
         interpret'' []     = return state
+
+interpretBlock :: Value -> State -> IO State
+interpretBlock (VBlock ss be) state = do
+  newState <- interpret ss state { scopeId = be }
+  return $ newState { scopeId = scopeId state }
 
 getDesuffixed = doDesuffixed getBinding
 findDesuffixed = doDesuffixed findBinding

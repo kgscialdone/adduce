@@ -7,6 +7,7 @@ Do (
   ).
 
   Raise "Same level".
+  Raise "Same level again".
   Do (Raise "Lower level").
 
   Do (

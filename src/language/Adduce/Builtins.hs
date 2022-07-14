@@ -15,23 +15,18 @@ print state =
 iff (x : y : z : xs) = (if asBool x then y else z) : xs
 iff xs               = VErr "Expected a bool and 2 values" : xs
 
-doo state@(State { stack = (VBlock ss _ : xs) }) = do
-  newState <- extendScope state
-  (State { stack = newStack }) <- handleError =<< (interpret ss $ restack xs $ newState)
-  return $ restack newStack state
-doo state = return $ push (VErr "Expected a block") state
+doo state@(State { stack = (b@(VBlock _ _) : xs) }) = handleError =<< (interpretBlock b $ restack xs state)
+doo state                                           = return $ push (VErr "Expected a block") state
 
-list state@(State { stack = (VBlock ss _ : xs) }) = do
-  newState <- extendScope state
-  (State { stack = newStack }) <- handleError =<< (interpret ss $ restack [] $ newState)
+list state@(State { stack = (b@(VBlock _ _) : xs) }) = do
+  (State { stack = newStack }) <- handleError =<< (interpretBlock b $ restack [] state)
   case newStack of
     (e@(VErr _) : _) -> return $ push e state
     _                -> return $ restack (VList newStack : xs) state
 list state = return $ push (VErr "Expected a block") state
 
-loop state@(State { stack = (b@(VBlock ss _) : xs) }) = do
-  newState <- extendScope state
-  (State { stack = newStack }) <- handleError =<< (interpret ss $ restack xs $ newState)
+loop state@(State { stack = (b@(VBlock _ _) : xs) }) = do
+  (State { stack = newStack }) <- handleError =<< (interpretBlock b $ restack xs state)
   case newStack of
     (e@(VErr _) : _) -> return $ restack (e : xs) state
     _                -> loop $ restack (b : newStack) state
@@ -40,8 +35,8 @@ loop state = return $ push (VErr "Expected a block") state
 raise (VStr x : xs) = VErr x : xs
 raise xs            = VErr "Expected a string" : xs
 
-catch state@(State { stack = (VBlock ss _ : xs) }) =
-  return $ restack xs $ withErrorH (\err stt -> interpret ss $ restack [VStr err] $ withoutErrorH stt) state
+catch state@(State { stack = (b@(VBlock _ _) : xs) }) =
+  return $ restack xs $ withErrorH (\err stt -> interpretBlock b $ restack [VStr err] $ withoutErrorH stt) state
 catch state = return $ push (VErr "Expected a block") state
 
 eq (x:y:xs) = VBool (x == y) : xs

@@ -1,4 +1,5 @@
 Error: Same level
+Error: Same level again
 Error: Lower level
 Caught by the inner catch
 This should execute

@@ -152,7 +152,7 @@ prettyPrint (VStr x)  = show x
 prettyPrint (VList x) = "List(" ++ intercalate ", " (map prettyPrint x) ++ ")"
 prettyPrint x         = show x
 
--- | Return the type name of a `Value`, as expected by the @:@ `Form`
+-- | Return the type name of a `Value`
 typeName :: Value -> String
 typeName (VInt _) = "Int"
 typeName (VFlt _) = "Float"
