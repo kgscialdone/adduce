@@ -26,6 +26,7 @@ data State = State
   , bindings :: Map BindingKey Value
   , parents  :: Map ScopeId ScopeId
   , errorhs  :: Map ScopeId (String -> State -> IO State)
+  , raised   :: Maybe String
   }
 
 instance Show State where
@@ -35,6 +36,7 @@ instance Show State where
     "\n  bindings: ", showMapFull (keyedPartition $ keys (bindings s)),
     "\n  parents: ", showMapComp (parents s),
     "\n  errorhs: ", show (keys (errorhs s)),
+    "\n  raised: ", show (raised s),
     "\n}"]
     where
       showMapFull m = "[\n    " ++ intercalate ",\n    " (zipWith (\a b -> show a ++ " => " ++ show b) (keys m) (elems m)) ++ "\n  ]"
@@ -43,7 +45,7 @@ instance Show State where
 newState :: IO State
 newState = do
   newId <- ScopeId <$> newUnique
-  return $ State { stack = [], scopeId = newId, bindings = empty, parents = empty, errorhs = empty }
+  return $ State { stack = [], scopeId = newId, bindings = empty, parents = empty, errorhs = empty, raised = Nothing }
 
 push :: Value -> State -> State
 push value state = state { stack = value : stack state }
@@ -76,6 +78,9 @@ withoutErrorH state = state { errorhs = Map.delete (scopeId state) (errorhs stat
 getErrorH :: State -> Maybe ErrorHandler
 getErrorH state = Map.lookup (scopeId state) (errorhs state)
 
+raiseError :: String -> State -> State
+raiseError err state = state { raised = Just err }
+
 extendScope :: State -> IO State
 extendScope state = do
   newId <- ScopeId <$> newUnique
@@ -106,8 +111,7 @@ data Value = VInt Integer
            | VBool Bool
            | VList [Value]
            | VBlock [Statement] ScopeId
-           | VErr String
-           | VFunc ([Value] -> [Value])
+           | VFunc ([Value] -> Either String [Value])
            | VIOFn (State   -> IO State)
            | VAlias BindingKey
 
@@ -118,7 +122,6 @@ instance Show Value where
   show (VBool x)      = show x
   show l@(VList _)    = prettyPrint l
   show (VBlock x _)   = "<block (" ++ intercalate ", " (map show $ intercalate [StmtEnd] x) ++ ")>"
-  show (VErr x)       = "Error: " ++ x
   show (VFunc _)      = "<func>"
   show (VIOFn _)      = "<iofn>"
   show (VAlias (s,n)) = "<alias " ++ show s ++ ":" ++ unintern n ++ ">"
@@ -160,7 +163,6 @@ typeName (VStr _) = "String"
 typeName (VBool _) = "Bool"
 typeName (VList _) = "List"
 typeName (VBlock _ _) = "Block"
-typeName (VErr _) = "Error"
 typeName _ = "Invalid type"
 
 -- | Exception type thrown by Adduce's default error handler.

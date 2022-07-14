@@ -51,23 +51,25 @@ interpret statements state =
 
         interpret'' (Form "Let" [Ident x] : xs) = let' stk where
           let' (y:ys) = interpret' xs $ setBinding x y $ restack ys state
-          let' _      = interpret' xs $ push (VErr "Expected 1 value") state
+          let' _      = interpret' xs $ raiseError "Expected 1 value" state
 
         interpret'' (Form "Def" [Ident x] : xs) = def' stk where
           def' (b@(VBlock _ _) : ys) = interpret' xs $ setBinding x (VIOFn (\s -> interpretBlock b s)) $ restack ys state
-          def' _                     = interpret' xs $ push (VErr "Expected a block") state
+          def' _                     = interpret' xs $ raiseError "Expected a block" state
 
         interpret'' (Form "Alias" [Ident a, Ident b] : xs) = case findDesuffixed b state of
           Just b  -> interpret' xs $ setBinding a (VAlias b) state
-          Nothing -> interpret' xs $ push (VErr ("Unknown symbol `" ++ unintern b ++ "`")) state
+          Nothing -> interpret' xs $ raiseError ("Unknown symbol `" ++ unintern b ++ "`") state
 
         interpret'' (Ident x : xs) = resolveIdent x state where
           resolveIdent x rst = case getDesuffixed x rst of
             Just (VAlias (s,n)) -> resolveIdent n rst { scopeId = s }
-            Just (VFunc f)      -> interpret' xs $ restack (f stk) state
             Just (VIOFn f)      -> interpret' xs =<< f state
+            Just (VFunc f)      -> case f stk of
+              Left err -> interpret' xs $ raiseError err state
+              Right ns -> interpret' xs $ restack ns state
             Just x              -> interpret' xs $ push x state
-            Nothing             -> interpret' xs $ push (VErr ("Unknown symbol `" ++ unintern x ++ "`")) state
+            Nothing             -> interpret' xs $ raiseError ("Unknown symbol `" ++ unintern x ++ "`") state
 
         interpret'' (x:xs) = error $ "Internal error: Unhandled token " ++ show x
         interpret'' []     = return state
@@ -110,10 +112,10 @@ handleError s = fromEither <$> handleError' (\a b -> return b) s []
 --   - `Right` represents that the error was properly handled with no re-raise.
 --   - `Left` represents that the error wasn't handled, or that the handler raised a new error.
 handleError' :: (Statement -> State -> IO State) -> State -> Statement -> IO (Either State State)
-handleError' c state s = case (stack state, getErrorH state) of
-  (VErr e : xs, Nothing) -> return $ Left state
-  (VErr e : xs, Just eh) -> eh e state >>= \newState -> case stack newState of
-    (y@(VErr _) : _) -> return $ Left  $ retop y $ withoutErrorH state
-    _                -> return $ Right $ restack xs state
-  (_, _)                 -> Right <$> c s state
+handleError' c state s = case (raised state, getErrorH state) of
+  (Just e, Just eh) -> eh e state >>= \newState -> case raised newState of
+    Just e  -> return $ Left $ withoutErrorH $ raiseError e state
+    Nothing -> return $ Right $ state { raised = Nothing }
+  (Just e, Nothing) -> return $ Left state
+  (Nothing, _)      -> Right <$> c s state
 
