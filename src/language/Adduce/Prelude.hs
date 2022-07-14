@@ -33,7 +33,7 @@ defaultState = newState >>= \s -> return $
       ("If",    VFunc B.iff),
       ("List",  VIOFn B.list),
 
-      ("$_loop", VIOFn B.loop),
+      ("Loop", VIOFn B.loop),
 
       ("==",  VFunc B.eq),
       ("<=",  VFunc B.le),

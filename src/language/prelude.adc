@@ -57,8 +57,6 @@ Def Number! (Let X. Do If Number? X then `X else (Raise "Expected a Number" )).
 Def Break (Raise "$_adduce_internal__BREAK_").
 Def Breakpoint (Catch (Let E. Do If == E "$_adduce_internal__BREAK_" () (Raise E)). Do).
 
-Def Loop (Def Body. Breakpoint ($_loop `Body)).
-
 Def While (
   Def Cond. Def Body.
   Loop (Let B Cond. Do If B `Body `Break).

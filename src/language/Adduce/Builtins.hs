@@ -28,8 +28,9 @@ list state = return $ raiseError "Expected a block" state
 loop state@(State { stack = (b@(VBlock _ _) : xs) }) = do
   ns <- interpretBlock b $ restack xs state
   case raised ns of
-    Just e  -> return $ raiseError e $ restack xs state
-    Nothing -> loop $ restack (b : stack ns) state
+    Just "$_adduce_internal__BREAK_" -> return $ restack (stack ns) state
+    Just e                           -> return $ raiseError e $ restack xs state
+    Nothing                          -> loop $ restack (b : stack ns) state
 loop state = return $ raiseError "Expected a block" state
 
 raise state@(State { stack = (VStr x : xs) }) = return $ restack xs $ raiseError x state
