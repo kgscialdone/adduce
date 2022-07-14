@@ -54,6 +54,11 @@ tokenize = tokenize'
       | 'e' `elem` acc              = invalidNumber (acc ++ ['e', c]) cs
       | isDigit c                   = takeNumber (acc ++ ['.',c]) cs
       | otherwise                   = Right acc : tokenize' ('.':c:cs)
+    takeNumber acc ('E':'-':c:cs)   = takeNumber acc ('e':'-':c:cs)
+    takeNumber acc ('e':'-':c:cs)
+      | 'e' `elem` acc              = invalidNumber (acc ++ "e-" ++ [c]) cs
+      | isDigit c                   = takeNumber (acc ++ "e-" ++ [c]) cs
+      | otherwise                   = invalidNumber (acc ++ "e-") cs
     takeNumber acc ('E':c:cs)       = takeNumber acc ('e':c:cs)
     takeNumber acc ('e':c:cs)
       | 'e' `elem` acc              = invalidNumber (acc ++ ['e', c]) cs
