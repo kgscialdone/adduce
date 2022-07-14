@@ -45,7 +45,6 @@ interpret statements state =
         interpret'' (FltLit x : xs)  = interpret' xs $ push (VFlt x) state
         interpret'' (StrLit x : xs)  = interpret' xs $ push (VStr x) state
         interpret'' (BoolLit x : xs) = interpret' xs $ push (VBool x) state
-        -- interpret'' (SymLit x : xs)  = interpret' xs $ push (VSym x) state
         interpret'' (Block ss : xs)  = do
           newState <- extendScope state
           interpret' xs $ push (VBlock ss (scopeId newState)) newState { scopeId = scopeId state }
