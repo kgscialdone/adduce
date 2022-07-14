@@ -166,5 +166,5 @@ verify = verify' True
 
 -- | List of reserved identifier names that cannot be used by Let/Def/Alias
 reservedNames :: [InternedString]
-reservedNames = map intern ["Let","Def","Alias","Catch"]
+reservedNames = map intern ["Let","Def","Alias","Catch","Raise"]
 
