@@ -126,3 +126,6 @@ concat xs                       = VErr "Expected 2 lists or 2 strings" : xs
 toString (x : xs) = VStr (show x) : xs
 toString xs       = VErr "Expected 1 value" : xs
 
+typeOf (x : xs) = VStr (typeName x) : xs
+typeOf xs       = VErr "Expected 1 value" : xs
+

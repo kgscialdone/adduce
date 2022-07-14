@@ -60,26 +60,6 @@ interpret statements state =
             return $ restack (stack ns) s)) $ restack ys state
           def' _                   = interpret' xs $ push (VErr "Expected a block") state
 
-        interpret'' (Form ":" [Ident x] : xs) = tch' (unintern x) stk where
-          tch' "Int"    (VInt y : _)     = interpret' xs state
-          tch' "Float"  (VFlt y : _)     = interpret' xs state
-          tch' "String" (VStr y : _)     = interpret' xs state
-          tch' "Bool"   (VBool y : _)    = interpret' xs state
-          tch' "List"   (VList y : _)    = interpret' xs state
-          tch' "Block"  (VBlock y z : _) = interpret' xs state
-          tch' _ (y:_) = interpret' xs $ push (VErr ("Type error, expected `" ++ unintern x ++ "` but got `" ++ typeName y ++ "`")) state
-          tch' _ _     = interpret' xs $ push (VErr "Expected 1 value") state
-
-        interpret'' (Form "?:" [Ident x] : xs) = tch' (unintern x) stk where
-          tch' "Int"    (VInt y : _)     = interpret' xs $ retop (VBool True) state
-          tch' "Float"  (VFlt y : _)     = interpret' xs $ retop (VBool True) state
-          tch' "String" (VStr y : _)     = interpret' xs $ retop (VBool True) state
-          tch' "Bool"   (VBool y : _)    = interpret' xs $ retop (VBool True) state
-          tch' "List"   (VList y : _)    = interpret' xs $ retop (VBool True) state
-          tch' "Block"  (VBlock y z : _) = interpret' xs $ retop (VBool True) state
-          tch' _ (_:_) = interpret' xs $ retop (VBool False) state
-          tch' _ _     = interpret' xs $ push (VErr "Expected 1 value") state
-
         interpret'' (Form "Alias" [Ident a, Ident b] : xs) = case findDesuffixed b state of
           Just b  -> interpret' xs $ setBinding a (VAlias b) state
           Nothing -> interpret' xs $ push (VErr ("Unknown symbol `" ++ unintern b ++ "`")) state

@@ -38,6 +38,22 @@ Alias Dec Decrement.
 Def Unless (If Not).
 Def $ (Do \).
 
+Def Int?    (== "Int"    TypeOf).
+Def Float?  (== "Float"  TypeOf).
+Def String? (== "String" TypeOf).
+Def Bool?   (== "Bool"   TypeOf).
+Def List?   (== "List"   TypeOf).
+Def Block?  (== "Block"  TypeOf).
+Def Number? (Or Int? Float? Twin).
+
+Def Int!    (Let X. Do If Int?    X then `X else (Raise "Expected an Int"   )).
+Def Float!  (Let X. Do If Float?  X then `X else (Raise "Expected a Float"  )).
+Def String! (Let X. Do If String? X then `X else (Raise "Expected a String" )).
+Def Bool!   (Let X. Do If Bool?   X then `X else (Raise "Expected a Bool"   )).
+Def List!   (Let X. Do If List?   X then `X else (Raise "Expected a List"   )).
+Def Block!  (Let X. Do If Block?  X then `X else (Raise "Expected a Block"  )).
+Def Number! (Let X. Do If Number? X then `X else (Raise "Expected a Number" )).
+
 Def Break (Raise "$_adduce_internal__BREAK_").
 Def Breakpoint (
   Catch (Let E. Do If == E "$_adduce_internal__BREAK_" () (Raise E)).
@@ -53,26 +69,26 @@ Def While (
 
 Def For (
   Def Body \.
-  Drop Loop (Let L : List. Body Do (Catch `Break. Head L). Tail L).
+  Drop Loop (Let L List!. Body Do (Catch `Break. Head L). Tail L).
 ).
 Def Reduce (For \).
 
 Def Length (Reduce (Inc Drop) \ 0).
 
 Def Get (
-  Let Index : Int. Let Items : List.
+  Let Index Int!. Let Items List!.
   Catch (Raise Join List ("Index out of bounds; tried to Get index ", Index, " but the max index was ", Dec Length Items) '').
   Drop While (> Index Twin) (Tail Swap. Inc Swap) 0 Items.
   Head.
 ).
 
-Def Sum (Let Items : List. For Items `+ from 0).       ; Returns the sum of a list of numbers.
-Def Product (Let Items : List. For Items `* from 1).   ; Returns the product of a list of numbers.
+Def Sum (Let Items List!. For Items `+ from 0).       ; Returns the sum of a list of numbers.
+Def Product (Let Items List!. For Items `* from 1).   ; Returns the product of a list of numbers.
 
 ; Creates a List containing Value a given number of Times.
 Def Repeat (
   Let Value be from the stack.
-  Let Times : Int.
+  Let Times Int!.
   List (Drop While (has a Greater Times than Twin the index) (
     Let Index be from the stack.
     add the Value to the list.
@@ -87,7 +103,7 @@ Def Reverse (Let Items. List (For Items ())).
 ; Adds the index below the item in the stack and expects it to be used; use Map if it's not needed.
 Def MapI (
   Def Body.
-  Let Items : List.
+  Let Items List!.
   Reverse List (Drop While (has a Greater Length of Items than the Twin index) (
     Let Index be from the stack.
     run the Body over Get Index from Items, and Index.
@@ -98,15 +114,15 @@ Def Map (Def Body. MapI (Body Drop Swap)).
 
 ; Create a List of numbers between a LowerBound (inclusive) and UpperBound (exclusive).
 Def Range (
-  Let LowerBound : Int.
-  Let UpperBound : Int.
+  Let LowerBound Int!.
+  Let UpperBound Int!.
   MapI `+ over Repeat LowerBound, Dec UpperBound times.
 ).
 
 ; Join a List into a String, with the given delimiter interspersed.
 Def Join (
-  Let Items : List.
-  Let Delim : String.
+  Let Items List!.
+  Let Delim String!.
   Let Items be the Reverse Tail of Map (ToString \ Delim) over Items.
   Reduce by `Concat over the Items starting from ''.
 ).

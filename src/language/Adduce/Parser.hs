@@ -115,8 +115,8 @@ parse = parse' &. groupBy groupStatements &. map (filter filterEnds) &. filter (
       is@[Ident _, Ident _] -> Form f is : parse'' ts
       _                     -> [Invalid $ "`"++f++"` must be followed by 2 valid identifiers"]
 
-    parse'' [f]      | f `elem` ["Let","Def",":","?:"] = [Invalid $ "`"++f++"` must be followed by a valid identifier"]
-    parse'' (f:t:ts) | f `elem` ["Let","Def",":","?:"] = let pt = parse'' [t] in case pt of
+    parse'' [f]      | f `elem` ["Let","Def"] = [Invalid $ "`"++f++"` must be followed by a valid identifier"]
+    parse'' (f:t:ts) | f `elem` ["Let","Def"] = let pt = parse'' [t] in case pt of
       is@[Ident _] -> Form f is : parse'' ts
       _            -> [Invalid $ "`"++f++"` must be followed by a valid identifier"]
 
@@ -143,12 +143,6 @@ verify = verify' True
     verify' False (Form "Alias" _ : _) = Just "`Alias` cannot appear in the middle of a statement"
     verify' False (Form "Let" _ : _)   = Just "`Let` cannot appear in the middle of a statement"
     verify' False (Form "Def" _ : _)   = Just "`Def` cannot appear in the middle of a statement"
-    verify' _ (Form ":" [Ident x] : xs)
-      | x `elem` typeNames = verify' False xs
-      | otherwise          = Just $ "Expected a valid type name, but got `" ++ unintern x ++ "`"
-    verify' _ (Form "?:" [Ident x] : xs)
-      | x `elem` typeNames = verify' False xs
-      | otherwise          = Just $ "Expected a valid type name, but got `" ++ unintern x ++ "`"
     verify' _ (Block ss : xs) = let res = filter isJust $ map verify ss in case length res of
       0 -> Nothing
       _ -> Just $ unlines $ map fromJust res
@@ -157,5 +151,4 @@ verify = verify' True
     verify' _ []               = Nothing
 
     formNames = map (intern :: String -> InternedString) ["Let","Def","Alias",":","?:"]
-    typeNames = map (intern :: String -> InternedString) ["Int","Float","Bool","String","List","Block"]
 

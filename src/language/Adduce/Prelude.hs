@@ -52,6 +52,7 @@ defaultState = newState >>= \s -> return $
       ("Concatenate", VFunc B.concat),
 
       ("ToString", VFunc B.toString),
+      ("TypeOf", VFunc B.typeOf),
 
       ("Raise", VFunc B.raise),
       ("Catch", VIOFn B.catch)
