@@ -32,8 +32,8 @@ loop state@(State { stack = (b@(VBlock _ _) : xs) }) = do
     Nothing -> loop $ restack (b : stack ns) state
 loop state = return $ raiseError "Expected a block" state
 
-raise (VStr x : xs) = Left x
-raise xs            = Left "Expected a string"
+raise state@(State { stack = (VStr x : xs) }) = return $ restack xs $ raiseError x state
+raise state                                   = return $ raiseError "Expected a string" state
 
 catch state@(State { stack = (b@(VBlock _ _) : xs) }) =
   return $ restack xs $ withErrorH (\err stt -> interpretBlock b $ restack [VStr err] $ withoutErrorH stt { raised = Nothing }) state

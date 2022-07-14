@@ -55,7 +55,7 @@ defaultState = newState >>= \s -> return $
       ("ToString", VFunc B.toString),
       ("TypeOf", VFunc B.typeOf),
 
-      ("Raise", VFunc B.raise),
+      ("Raise", VIOFn B.raise),
       ("Catch", VIOFn B.catch)
       ]
 
