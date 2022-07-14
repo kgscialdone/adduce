@@ -45,9 +45,11 @@ interpret statements state =
         interpret'' (FltLit x : xs)  = interpret' xs $ push (VFlt x) state
         interpret'' (StrLit x : xs)  = interpret' xs $ push (VStr x) state
         interpret'' (BoolLit x : xs) = interpret' xs $ push (VBool x) state
-        interpret'' (Block ss : xs)  = do
-          newState <- extendScope state
-          interpret' xs $ push (VBlock ss (scopeId newState)) newState { scopeId = scopeId state }
+        interpret'' b@(Block ss : xs)  = if isPure ss
+          then interpret' xs $ push (VBlock ss (scopeId state)) state
+          else do
+            newState <- extendScope state
+            interpret' xs $ push (VBlock ss (scopeId newState)) newState { scopeId = scopeId state }
 
         interpret'' (Form "Let" [Ident x] : xs) = let' stk where
           let' (y:ys) = interpret' xs $ setBinding x y $ restack ys state
@@ -73,6 +75,16 @@ interpret statements state =
 
         interpret'' (x:xs) = error $ "Internal error: Unhandled token " ++ show x
         interpret'' []     = return state
+
+        isPure :: [Statement] -> Bool
+        isPure ss = all id $ map (all isPure') ss where
+          isPure' (Form "Let" _)   = False
+          isPure' (Form "Def" _)   = False
+          isPure' (Form "Alias" _) = False
+          isPure' (Ident s)
+            | s == intern "Catch"  = False
+            | s == intern "Raise"  = False
+          isPure' _                = True
 
 interpretBlock :: Value -> State -> IO State
 interpretBlock (VBlock ss be) state = do
