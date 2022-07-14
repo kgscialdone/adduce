@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase #-}
 
 -- | Language builtins and prelude file
 module Adduce.Prelude where
@@ -15,9 +16,9 @@ import Utils
 import Paths_adduce
 
 -- | Load the prelude file and return its environment.
-loadPrelude = do
+loadPrelude debug = do
   prelude <- readFile =<< getDataFileName "src/language/prelude.adc"
-  prelude <- exec prelude =<< extendScope =<< defaultState
+  prelude <- exec prelude =<< extendScope =<< if debug then debugState else defaultState
   return $ fromMaybe (errorWithoutStackTrace "Failed to load prelude") prelude
 
 -- | Default program environment.
@@ -56,5 +57,17 @@ defaultState = newState >>= \s -> return $
 
       ("Raise", VFunc B.raise),
       ("Catch", VIOFn B.catch)
+      ]
+
+-- | Debug bindings, only available with @--debug@ flag.
+debugState = defaultState >>= \s -> return $
+  foldr (\(k,v) s -> setBinding k v s) s $ map (\(a,b) -> (intern a, b)) bindings
+  where
+    bindings = [
+      ("PrStack", VIOFn (\st@(State { stack = s }) -> do print s; return st)),
+      ("PrState", VIOFn (\st                       -> do print st; return st)),
+      ("PrType",  VIOFn (\case
+            st@(State { stack = (x:xs) }) -> do putStrLn . typeName $ x; return st
+            st                            -> return $ raiseError "Expected 1 value" st))
       ]
 

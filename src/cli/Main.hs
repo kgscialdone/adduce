@@ -1,8 +1,6 @@
 -- Adduce Interpreter v0.1.0
 -- by Katrina Scialdone
 
-{-# LANGUAGE LambdaCase #-}
-
 module Main where
 
 import Control.Monad (void)
@@ -37,34 +35,19 @@ execCli = \case
     ["run",            path] -> run path False
     ["run"]                  -> do putStrLn usage; exitFailure
 
-    ["exec", "-d",      program] -> void $ exec program =<< extendScope =<< debugScope
-    ["exec", "--debug", program] -> void $ exec program =<< extendScope =<< debugScope
+    ["exec", "-d",      program] -> void $ exec program =<< extendScope =<< loadPrelude True
+    ["exec", "--debug", program] -> void $ exec program =<< extendScope =<< loadPrelude True
     ["exec", "-d"]               -> do putStrLn usage; exitFailure
     ["exec", "--debug"]          -> do putStrLn usage; exitFailure
-    ["exec",            program] -> void $ exec program =<< extendScope =<< loadPrelude
+    ["exec",            program] -> void $ exec program =<< extendScope =<< loadPrelude False
     ["exec"]                     -> do putStrLn usage; exitFailure
 
     _ -> do putStrLn usage; exitFailure
   where
     run :: String -> Bool -> IO ()
-    run path False = do
+    run path debug = do
       program <- readFile path
-      void $ exec program =<< extendScope =<< loadPrelude
-    run path True = do
-      program <- readFile path
-      void $ exec program =<< extendScope =<< debugScope
-
-    debugScope :: IO State
-    debugScope = loadPrelude >>= extendScope >>= \s ->
-      return $ foldr (\(k,v) s -> setBinding k v s) s $ map (\(a,b) -> (intern a, b)) bindings
-      where
-        bindings = [
-          ("PrStack", VIOFn (\st@(State { stack = s }) -> do print s; return st)),
-          ("PrState", VIOFn (\st                       -> do print st; return st)),
-          ("PrType",  VIOFn (\case
-            st@(State { stack = (x:xs) }) -> do putStrLn . typeName $ x; return st
-            st                            -> return $ push (VErr "Expected 1 value") st))
-          ]
+      void $ exec program =<< extendScope =<< loadPrelude debug
 
     usage = unlines [
       "Usage: adduce <subcommand> [flags] <subcommand args>",

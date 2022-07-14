@@ -26,7 +26,7 @@ main = do
     putStrLn "Error: Test and output files do not match!"
     exitFailure)
 
-  prelude <- loadPrelude
+  prelude <- loadPrelude True
   results <- mapM (runTest prelude) $ zip testFiles outpFiles
 
   if and results
