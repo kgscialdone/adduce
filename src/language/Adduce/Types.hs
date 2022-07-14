@@ -102,7 +102,17 @@ data Token = Form String [Token]
            | BoolLit Bool
            | StmtEnd
            | Invalid String
-  deriving Show
+
+instance Show Token where
+  show (Form s ts) = intercalate " " $ s : (map show ts)
+  show (Ident s)   = unintern s
+  show (Block ss)  = "(" ++ intercalate ". " (map (intercalate " " . map show) ss) ++ ")"
+  show (IntLit x)  = show x
+  show (FltLit x)  = show x
+  show (StrLit x)  = show x
+  show (BoolLit x) = show x
+  show StmtEnd     = "."
+  show (Invalid s) = "{Syntax error: " ++ s ++ "}"
 
 -- | A processed value which can appear in Adduce's stack or `Env`.
 data Value = VInt Integer
@@ -121,7 +131,7 @@ instance Show Value where
   show (VStr x)       = x
   show (VBool x)      = show x
   show l@(VList _)    = prettyPrint l
-  show (VBlock x _)   = "<block (" ++ intercalate ", " (map show $ intercalate [StmtEnd] x) ++ ")>"
+  show (VBlock x _)   = "<block " ++ show (Block x) ++ ">"
   show (VFunc _)      = "<func>"
   show (VIOFn _)      = "<iofn>"
   show (VAlias (s,n)) = "<alias " ++ show s ++ ":" ++ unintern n ++ ">"
