@@ -1,0 +1,12 @@
+; Namespaces
+
+push 73 to the stack.
+
+Namespace Test containing (
+  Let X be 42.
+  Print X.
+).
+
+Print Test->X.
+Print. ; the 73 from before defining the namespace
+

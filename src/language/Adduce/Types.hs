@@ -95,6 +95,7 @@ findParent f state
 -- | The smallest semantically meaningful chunk of an Adduce program.
 data Token = Form String [Token]
            | Ident InternedString
+           | NSIdent [InternedString]
            | Block [Statement]
            | IntLit Integer
            | FltLit Double
@@ -106,6 +107,7 @@ data Token = Form String [Token]
 instance Show Token where
   show (Form s ts) = intercalate " " $ s : (map show ts)
   show (Ident s)   = unintern s
+  show (NSIdent s) = intercalate "->" $ map unintern s
   show (Block ss)  = "(" ++ intercalate ". " (map (intercalate " " . map show) ss) ++ ")"
   show (IntLit x)  = show x
   show (FltLit x)  = show x
@@ -124,17 +126,24 @@ data Value = VInt Integer
            | VFunc ([Value] -> Either String [Value])
            | VIOFn (State   -> IO State)
            | VAlias BindingKey
+           | VScope ScopeId
 
 instance Show Value where
   show (VInt x)       = show x
   show (VFlt x)       = show x
   show (VStr x)       = x
   show (VBool x)      = show x
-  show l@(VList _)    = prettyPrint l
+  show (VList x)      = "List(" ++ intercalate ", " (map prettyPrint x) ++ ")"
   show (VBlock x _)   = "<block " ++ show (Block x) ++ ">"
   show (VFunc _)      = "<func>"
   show (VIOFn _)      = "<iofn>"
   show (VAlias (s,n)) = "<alias " ++ show s ++ ":" ++ unintern n ++ ">"
+  show (VScope s)     = "<namespace " ++ show s ++ ">"
+
+-- | Pretty-print a `Value` for display in Lists etc.
+prettyPrint :: Value -> String
+prettyPrint (VStr x)  = show x
+prettyPrint x         = show x
 
 instance Eq Value where
   VInt x  == VInt y  = x == y
@@ -159,12 +168,6 @@ instance BoolCoerceable Value where
   asBool _          = True
 
 
--- | Pretty-print a `Value` for display in Lists etc.
-prettyPrint :: Value -> String
-prettyPrint (VStr x)  = show x
-prettyPrint (VList x) = "List(" ++ intercalate ", " (map prettyPrint x) ++ ")"
-prettyPrint x         = show x
-
 -- | Return the type name of a `Value`
 typeName :: Value -> String
 typeName (VInt _) = "Int"
@@ -173,6 +176,7 @@ typeName (VStr _) = "String"
 typeName (VBool _) = "Bool"
 typeName (VList _) = "List"
 typeName (VBlock _ _) = "Block"
+typeName (VScope _) = "Namespace"
 typeName _ = "Invalid type"
 
 -- | Exception type thrown by Adduce's default error handler.

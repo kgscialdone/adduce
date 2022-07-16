@@ -4,7 +4,7 @@ module Utils where
 
 import Control.Monad (foldM)
 import Data.Char (isSpace)
-import Data.List (dropWhileEnd)
+import Data.List (dropWhileEnd, isPrefixOf)
 import Data.Map as Map (Map, empty, insert, member, (!))
 import Data.Bifunctor (Bifunctor, bimap)
 
@@ -36,6 +36,15 @@ bimapBoth f = bimap f f
 -- | Trim whitespace from both ends of a string.
 trim :: String -> String
 trim = dropWhileEnd isSpace . dropWhile isSpace
+
+-- | Split a string by a delimiter
+split :: Eq a => [a] -> [a] -> [[a]]
+split sub str = split' sub str [] []
+  where
+  split' _   []  subacc acc = reverse (reverse subacc:acc)
+  split' sub str subacc acc
+    | sub `isPrefixOf` str = split' sub (drop (length sub) str) [] (reverse subacc:acc)
+    | otherwise            = split' sub (tail str) (head str:subacc) acc
 
 -- | Group a list of tuples into a map of lists, grouping by the first of each tuple.
 keyedPartition :: Ord k => [(k,v)] -> Map k [v]
