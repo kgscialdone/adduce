@@ -6,7 +6,6 @@
 module Main where
 
 import Control.Monad (void)
-import Data.Interned (intern)
 
 import System.Environment
 import System.Exit

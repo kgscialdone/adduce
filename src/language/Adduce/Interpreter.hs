@@ -4,9 +4,8 @@
 module Adduce.Interpreter where
 
 import Control.Exception (catch)
-import Data.List (reverse, isSuffixOf, group)
+import Data.List (isSuffixOf, group)
 import Data.Maybe (isJust, fromJust)
-import Data.Either (either)
 import Data.Function ((&))
 import Data.Interned (intern, unintern)
 import Data.Interned.String (InternedString)

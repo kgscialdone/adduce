@@ -6,7 +6,7 @@ import Control.Exception (Exception)
 import Data.List (intercalate)
 import Data.Map as Map (Map, lookup, insert, empty, keys, elems, delete, member)
 import Data.Unique (Unique, newUnique, hashUnique)
-import Data.Interned (Interned, unintern)
+import Data.Interned (unintern)
 import Data.Interned.String (InternedString)
 
 import Utils

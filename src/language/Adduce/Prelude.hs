@@ -4,14 +4,12 @@
 module Adduce.Prelude where
 
 import Control.Exception (throw)
-import Data.Map as Map (fromList)
 import Data.Maybe (fromMaybe)
 import Data.Interned (intern)
 
 import Adduce.Types
 import Adduce.Interpreter
 import qualified Adduce.Builtins as B
-import Utils
 
 import Paths_adduce
 

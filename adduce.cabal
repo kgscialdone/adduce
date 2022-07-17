@@ -12,6 +12,7 @@ data-files: src/language/prelude.adc
 common shared-properties
     default-language: Haskell2010
     build-depends:    base, containers
+    ghc-options:      -fwarn-unused-imports
 
 library
     import:         shared-properties
@@ -37,7 +38,7 @@ library adduce-utils
 executable adduce
     import:         shared-properties
     hs-source-dirs: src/cli
-    build-depends:  adduce, intern
+    build-depends:  adduce
     main-is:        Main.hs
 
 test-suite test-scripts
