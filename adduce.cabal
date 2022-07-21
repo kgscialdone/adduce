@@ -17,23 +17,19 @@ common shared-properties
 library
     import:         shared-properties
     hs-source-dirs: src/language
-    build-depends:  adduce-utils, intern
+    build-depends:  intern
     exposed-modules:
         Adduce.Interpreter
         Adduce.Prelude
-        Adduce.Types
+        Adduce.Types.State
+        Adduce.Types.Token
+        Adduce.Utils
     other-modules:
         Adduce.Builtins
         Adduce.Parser
         Paths_adduce
     autogen-modules:
         Paths_adduce
-
-library adduce-utils
-    import:          shared-properties
-    hs-source-dirs:  src/utils
-    visibility:      private
-    exposed-modules: Utils
 
 executable adduce
     import:         shared-properties
@@ -45,6 +41,6 @@ test-suite test-scripts
     import:         shared-properties
     type:           exitcode-stdio-1.0
     hs-source-dirs: src/test
-    build-depends:  adduce, adduce-utils, directory
+    build-depends:  adduce, directory
     main-is:        Main.hs
 

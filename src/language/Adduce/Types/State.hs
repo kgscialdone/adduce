@@ -1,18 +1,19 @@
 
--- | Core types and related functions.
-module Adduce.Types where
+module Adduce.Types.State where
 
 import Control.Exception (Exception)
+import Data.Map as Map (Map, insert, lookup, delete, member, keys, elems)
 import Data.List (intercalate)
-import Data.Map as Map (Map, lookup, insert, empty, keys, elems, delete, member)
 import Data.Unique (Unique, newUnique, hashUnique)
 import Data.Interned (unintern)
 import Data.Interned.String (InternedString)
 
-import Utils
+import Adduce.Types.Token
+import Adduce.Utils
 
-type Statement    = [Token]
 type ErrorHandler = String -> State -> IO State
+newtype AdduceError = AdduceError String deriving Show
+instance Exception AdduceError
 
 newtype ScopeId = ScopeId Unique deriving (Eq, Ord)
 type BindingKey = (ScopeId, InternedString)
@@ -24,6 +25,7 @@ data State = State
   { stack    :: [Value]
   , scopeId  :: ScopeId
   , bindings :: Map BindingKey Value
+  -- , macros   :: Map BindingKey Macro
   , parents  :: Map ScopeId ScopeId
   , errorhs  :: Map ScopeId (String -> State -> IO State)
   , raised   :: Maybe String
@@ -45,7 +47,7 @@ instance Show State where
 newState :: IO State
 newState = do
   newId <- ScopeId <$> newUnique
-  return $ State { stack = [], scopeId = newId, bindings = empty, parents = empty, errorhs = empty, raised = Nothing }
+  return $ State { stack = [], scopeId = newId, bindings = mempty, parents = mempty, errorhs = mempty, raised = Nothing }
 
 push :: Value -> State -> State
 push value state = state { stack = value : stack state }
@@ -92,31 +94,6 @@ findParent f state
   | otherwise = findParent f =<< getParent state
 
 
--- | The smallest semantically meaningful chunk of an Adduce program.
-data Token = Form String [Token]
-           | Ident InternedString
-           | NSIdent [InternedString]
-           | Block [Statement]
-           | IntLit Integer
-           | FltLit Double
-           | StrLit String
-           | BoolLit Bool
-           | StmtEnd
-           | Invalid String
-
-instance Show Token where
-  show (Form s ts) = intercalate " " $ s : (map show ts)
-  show (Ident s)   = unintern s
-  show (NSIdent s) = intercalate "->" $ map unintern s
-  show (Block ss)  = "(" ++ intercalate ". " (map (intercalate " " . map show) ss) ++ ")"
-  show (IntLit x)  = show x
-  show (FltLit x)  = show x
-  show (StrLit x)  = show x
-  show (BoolLit x) = show x
-  show StmtEnd     = "."
-  show (Invalid s) = "{Syntax error: " ++ s ++ "}"
-
--- | A processed value which can appear in Adduce's stack or `Env`.
 data Value = VInt Integer
            | VFlt Double
            | VStr String
@@ -140,11 +117,6 @@ instance Show Value where
   show (VAlias (s,n)) = "<alias " ++ show s ++ ":" ++ unintern n ++ ">"
   show (VScope s)     = "<namespace " ++ show s ++ ">"
 
--- | Pretty-print a `Value` for display in Lists etc.
-prettyPrint :: Value -> String
-prettyPrint (VStr x)  = show x
-prettyPrint x         = show x
-
 instance Eq Value where
   VInt x  == VInt y  = x == y
   VInt x  == VFlt y  = fromIntegral x == y
@@ -154,21 +126,18 @@ instance Eq Value where
   VBool x == VBool y = x == y
   _       == _       = False
 
+prettyPrint :: Value -> String
+prettyPrint (VStr x)  = show x
+prettyPrint x         = show x
 
--- | Typeclass for values which can be coerced to a boolean.
-class BoolCoerceable a where
-  asBool :: a -> Bool
+asBool :: Value -> Bool
+asBool (VInt x)   = x /= 0
+asBool (VFlt x)   = x /= 0 && x == x
+asBool (VStr x)   = x /= ""
+asBool (VBool x)  = x
+asBool (VList []) = False
+asBool _          = True
 
-instance BoolCoerceable Value where
-  asBool (VInt x)   = x /= 0
-  asBool (VFlt x)   = x /= 0 && x == x
-  asBool (VStr x)   = x /= ""
-  asBool (VBool x)  = x
-  asBool (VList []) = False
-  asBool _          = True
-
-
--- | Return the type name of a `Value`
 typeName :: Value -> String
 typeName (VInt _) = "Int"
 typeName (VFlt _) = "Float"
@@ -178,8 +147,4 @@ typeName (VList _) = "List"
 typeName (VBlock _ _) = "Block"
 typeName (VScope _) = "Namespace"
 typeName _ = "Invalid type"
-
--- | Exception type thrown by Adduce's default error handler.
-newtype AdduceError = AdduceError String deriving Show
-instance Exception AdduceError
 

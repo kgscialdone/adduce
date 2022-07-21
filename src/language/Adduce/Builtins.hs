@@ -5,7 +5,7 @@ module Adduce.Builtins where
 
 import Control.Monad (foldM)
 
-import Adduce.Types
+import Adduce.Types.State
 import Adduce.Interpreter
 
 print state@(State { stack = (x:xs) }) = do

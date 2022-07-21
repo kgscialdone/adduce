@@ -7,7 +7,7 @@ import Control.Exception (throw)
 import Data.Maybe (fromMaybe)
 import Data.Interned (intern)
 
-import Adduce.Types
+import Adduce.Types.State
 import Adduce.Interpreter
 import qualified Adduce.Builtins as B
 

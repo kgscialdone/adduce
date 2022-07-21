@@ -12,7 +12,7 @@ import System.Exit
 
 import Adduce.Interpreter
 import Adduce.Prelude
-import Adduce.Types
+import Adduce.Types.State
 
 -- | Current interpreter version
 version = "0.1.0"

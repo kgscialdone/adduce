@@ -12,8 +12,8 @@ import System.Exit
 
 import Adduce.Interpreter
 import Adduce.Prelude
-import Adduce.Types
-import Utils
+import Adduce.Types.State
+import Adduce.Utils
 
 testDir = "src/test/scripts/"
 outpDir = "src/test/output/"

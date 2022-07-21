@@ -1,6 +1,6 @@
 
 -- | Various utility functions used throughout the interpreter.
-module Utils where
+module Adduce.Utils where
 
 import Control.Monad (foldM)
 import Data.Char (isSpace)

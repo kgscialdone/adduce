@@ -10,9 +10,10 @@ import Data.Function ((&))
 import Data.Interned (intern, unintern)
 import Data.Interned.String (InternedString)
 
-import Adduce.Types
+import Adduce.Types.Token
+import Adduce.Types.State
 import Adduce.Parser
-import Utils
+import Adduce.Utils
 
 -- | Execute an Adduce program from a `String` of its source code and a parent `Env`.
 --   Returns the resulting `Env` after execution, or `Nothing` if an error occurred.

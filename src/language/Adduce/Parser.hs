@@ -10,8 +10,8 @@ import Data.Either (isLeft, fromLeft, fromRight)
 import Data.Interned (intern, unintern)
 import Data.Interned.String (InternedString)
 
-import Adduce.Types
-import Utils
+import Adduce.Types.Token
+import Adduce.Utils
 
 -- | Parse an Adduce program from a string, returning a list of `Statement`s.
 parseString :: String -> Either [String] [Statement]
