@@ -9,7 +9,9 @@ import Adduce.Types.State
 import Adduce.Interpreter
 
 print state@(State { stack = (x:xs) }) = do
-  Prelude.print x
+  case x of
+    VStr s -> putStrLn s
+    _      -> Prelude.print x
   return $ restack xs state
 print state =
   return $ raiseError "Expected at least 1 value" state

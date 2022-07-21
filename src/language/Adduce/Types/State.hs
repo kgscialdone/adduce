@@ -108,9 +108,9 @@ data Value = VInt Integer
 instance Show Value where
   show (VInt x)       = show x
   show (VFlt x)       = show x
-  show (VStr x)       = x
+  show (VStr x)       = show x
   show (VBool x)      = show x
-  show (VList x)      = "List(" ++ intercalate ", " (map prettyPrint x) ++ ")"
+  show (VList x)      = "List(" ++ intercalate ", " (map show x) ++ ")"
   show (VBlock x _)   = "<block " ++ show (Block x) ++ ">"
   show (VFunc _)      = "<func>"
   show (VIOFn _)      = "<iofn>"
@@ -125,10 +125,6 @@ instance Eq Value where
   VStr x  == VStr y  = x == y
   VBool x == VBool y = x == y
   _       == _       = False
-
-prettyPrint :: Value -> String
-prettyPrint (VStr x)  = show x
-prettyPrint x         = show x
 
 asBool :: Value -> Bool
 asBool (VInt x)   = x /= 0
