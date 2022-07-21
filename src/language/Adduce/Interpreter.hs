@@ -45,7 +45,6 @@ interpret statements state =
         interpret'' (IntLit x : xs)  = interpret' xs $ push (VInt x) state
         interpret'' (FltLit x : xs)  = interpret' xs $ push (VFlt x) state
         interpret'' (StrLit x : xs)  = interpret' xs $ push (VStr x) state
-        interpret'' (BoolLit x : xs) = interpret' xs $ push (VBool x) state
 
         interpret'' b@(Block ss : xs)  = if isPure ss
           then interpret' xs $ push (VBlock ss (scopeId state)) state

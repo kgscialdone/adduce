@@ -14,7 +14,6 @@ data Token = Form String [Token]
            | IntLit Integer
            | FltLit Double
            | StrLit String
-           | BoolLit Bool
            | StmtEnd
            | Invalid String
 
@@ -26,7 +25,6 @@ instance Show Token where
   show (IntLit x)  = show x
   show (FltLit x)  = show x
   show (StrLit x)  = show x
-  show (BoolLit x) = show x
   show StmtEnd     = "."
   show (Invalid s) = "{Syntax error: " ++ s ++ "}"
 
