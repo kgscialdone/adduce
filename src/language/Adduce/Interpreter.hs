@@ -3,48 +3,43 @@
 -- | Core language interpreter
 module Adduce.Interpreter where
 
-import Control.Exception (catch)
+import Control.Monad (when)
 import Data.List (isSuffixOf, group)
 import Data.Maybe (isJust, fromJust)
 import Data.Function ((&))
 import Data.Interned (intern, unintern)
 import Data.Interned.String (InternedString)
 
-import Adduce.Types.Token
-import Adduce.Types.State
+import Adduce.Types
 import Adduce.Parser
 import Adduce.Utils
 
 -- | Execute an Adduce program from a `String` of its source code and a parent `Env`.
 --   Returns the resulting `Env` after execution, or `Nothing` if an error occurred.
 exec :: String -> State -> IO (Maybe State)
-exec program state = catch (
-  case parseString program of
-    Right statements -> do
-      state <- interpret statements state
-      handleError $ fromJust $ findParent (isJust . getErrorH) state
-      return $ Just state
-    Left syntaxErrors -> do
-      putStrLn $ init $ unlines syntaxErrors
-      return Nothing)
-  (\(AdduceError e) -> do
-    putStrLn $ "Error: " ++ e
-    return Nothing)
+exec program state = case parseString program of
+  Right statements -> do
+    state <- interpret statements state
+    when (isJust $ raised state) (putStrLn $ "Error: " ++ fromJust (raised state))
+    return $ Just state
+  Left syntaxErrors -> do
+    putStrLn $ init $ unlines syntaxErrors
+    return Nothing
 
 -- | Execute a parsed Adduce program.
 --   May mutually recurse with various functions in `Adduce.Prelude`.
 interpret :: [Statement] -> State -> IO State
 interpret statements state =
-  handleError =<< foldPartialIO (handleError' interpret') state (map reverse statements)
+  handleError =<< foldPartialIO (\st ts -> expandMacros [] ts st >>= \(st,ts) -> handleError' interpret' st $ reverse ts) state statements
   where
     interpret' :: Statement -> State -> IO State
     interpret' stmt state@(State { stack = stk }) =
       fromEither <$> handleError' (\s _ -> interpret'' s) state stmt
       where
         interpret'' :: Statement -> IO State
-        interpret'' (IntLit x : xs)  = interpret' xs $ push (VInt x) state
-        interpret'' (FltLit x : xs)  = interpret' xs $ push (VFlt x) state
-        interpret'' (StrLit x : xs)  = interpret' xs $ push (VStr x) state
+        interpret'' (IntLit x : xs) = interpret' xs $ push (VInt x) state
+        interpret'' (FltLit x : xs) = interpret' xs $ push (VFlt x) state
+        interpret'' (StrLit x : xs) = interpret' xs $ push (VStr x) state
 
         interpret'' b@(Block ss : xs)  = if isPure ss
           then interpret' xs $ push (VBlock ss (scopeId state)) state
@@ -54,40 +49,14 @@ interpret statements state =
           where
             isPure :: [Statement] -> Bool
             isPure ss = all id $ map (all isPure') ss where
-              isPure' (Form "Let" _)       = False
-              isPure' (Form "Def" _)       = False
-              isPure' (Form "Alias" _)     = False
-              isPure' (Form "Namespace" _) = False
-              isPure' (Ident s)
-                | s `elem` reservedNames   = False
-              isPure' _                    = True
-
-        interpret'' (Form "Let" [Ident x] : xs) = let' stk where
-          let' (y:ys) = interpret' xs $ setBinding x y $ restack ys state
-          let' _      = interpret' xs $ raiseError "Expected 1 value" state
-
-        interpret'' (Form "Def" [Ident x] : xs) = def' stk where
-          def' (b@(VBlock _ _) : ys) = interpret' xs $ setBinding x (VIOFn (\s -> interpretBlock b s)) $ restack ys state
-          def' _                     = interpret' xs $ raiseError "Expected a block" state
-
-        interpret'' (Form "Alias" [Ident a, Ident b] : xs) = case findDesuffixed b state of
-          Just b  -> interpret' xs $ setBinding a (VAlias b) state
-          Nothing -> interpret' xs $ raiseError ("Unknown symbol `" ++ unintern b ++ "`") state
-        interpret'' (Form "Alias" [Ident a, i@(NSIdent _)] : xs) = case findNamespaced i state of
-          Right b -> interpret' xs $ setBinding a (VAlias b) state
-          Left e  -> interpret' xs $ raiseError e state
-
-        interpret'' (Form "Namespace" [Ident x] : xs) = ns' stk where
-          ns' (b@(VBlock ss be) : ys) = do
-            childState  <- extendScope $ restack [] state
-            resultState <- interpret ss childState
-            interpret' xs $ restack ys $ setBinding x (VScope $ scopeId childState) resultState { scopeId = scopeId state }
-          ns' _ = interpret' xs $ raiseError "Expected a block" state
+              isPure' (Ident s) = not $ s `elem` reservedNames
+              isPure' _         = True
 
         interpret'' (Ident x : xs)       = interpret' xs =<< resolveIdent where
           resolveIdent = maybe (return $ raiseError ("Unknown symbol `" ++ unintern x ++ "`") state) pushResolved $ getDesuffixed x state
         interpret'' (i@(NSIdent _) : xs) = interpret' xs =<< resolveIdent where
           resolveIdent = either (return . flip raiseError state) pushResolved $ getNamespaced i state
+        interpret'' (Thunk x : xs)       = interpret' xs =<< pushResolved x
 
         interpret'' (x:xs) = error $ "Internal error: Unhandled token " ++ show x
         interpret'' []     = return state
@@ -100,10 +69,21 @@ interpret statements state =
           Right ns -> restack ns state
         pushResolved x              = return $ push x state
 
+
 interpretBlock :: Value -> State -> IO State
 interpretBlock (VBlock ss be) state = do
   newState <- interpret ss state { scopeId = be }
   return $ newState { scopeId = scopeId state }
+
+expandMacros acc (t@(Ident x) : xs) state = case resolveDesuffixed getMacro x state of
+  Just m  -> m xs state >>= \(n,ys) -> expandMacros acc ys n
+  Nothing -> expandMacros (acc ++ [t]) xs state
+expandMacros acc (t : xs) state = expandMacros (acc ++ [t]) xs state
+expandMacros acc [] state       = return (state, acc)
+
+-- | List of reserved identifier names that cannot be redefined
+reservedNames :: [InternedString]
+reservedNames = map intern ["Let","Def","Alias","Namespace","Catch","Raise"]
 
 
 -- | Search a `State` for a given binding, performing desuffixing if needed, by applying the given search function.

@@ -12,7 +12,7 @@ import System.Exit
 
 import Adduce.Interpreter
 import Adduce.Prelude
-import Adduce.Types.State
+import Adduce.Types
 import Adduce.Utils
 
 testDir = "src/test/scripts/"

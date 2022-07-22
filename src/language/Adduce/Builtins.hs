@@ -4,9 +4,54 @@
 module Adduce.Builtins where
 
 import Control.Monad (foldM)
+import Data.Tuple (swap)
+import Data.Interned (unintern)
 
-import Adduce.Types.State
+import Adduce.Types
 import Adduce.Interpreter
+
+lett :: Macro
+lett (Ident x : xs) state
+  | x `elem` reservedNames = return (raiseError ("Cannot redefine reserved name `" ++ unintern x ++ "`") state, xs)
+  | otherwise              = return (state, (Thunk $ VIOFn lett') : xs)
+  where
+    lett' state@State { stack = (y : ys) } = return $ restack ys $ setBinding x y state
+    lett' state                            = return $ raiseError "Expected 1 value" state
+lett xs state = return (raiseError "`Let` must be followed by a valid non-namespaced identifier" state, xs)
+
+deff :: Macro
+deff (Ident x : xs) state
+  | x `elem` reservedNames = return (raiseError ("Cannot redefine reserved name `" ++ unintern x ++ "`") state, xs)
+  | otherwise              = return (state, (Thunk $ VIOFn deff') : xs)
+  where
+    deff' state@State { stack = (b@(VBlock _ _) : ys) } = return $ restack ys $ setBinding x (VIOFn (\s -> interpretBlock b s)) state
+    deff' state                                         = return $ raiseError "Expected a block" state
+deff xs state = return (raiseError "`Def` must be followed by a valid non-namespaced identifier" state, xs)
+
+alias :: Macro
+alias (Ident x : xs) state
+  | x `elem` reservedNames = return (raiseError ("Cannot redefine reserved name `" ++ unintern x ++ "`") state, xs)
+  | otherwise              = alias' xs
+  where
+    alias' (Ident y : xs) = return $ swap (xs, case findDesuffixed y state of
+      Just y  -> setBinding x (VAlias y) state
+      Nothing -> raiseError ("Unknown symbol `" ++ unintern y ++ "`") state)
+    alias' (y@(NSIdent _) : xs) = return $ swap (xs, case findNamespaced y state of
+      Right y -> setBinding x (VAlias y) state
+      Left e  -> raiseError e state)
+alias xs state = return (raiseError "`Alias` must be followed by 2 valid identifiers, the first of which must be non-namespaced" state, xs)
+
+namespace :: Macro
+namespace (Ident x : xs) state
+  | x `elem` reservedNames = return (raiseError ("Cannot redefine reserved name `" ++ unintern x ++ "`") state, xs)
+  | otherwise              = return (state, (Thunk $ VIOFn namespace') : xs)
+  where
+    namespace' state@State { stack = (b@(VBlock ss be) : ys) } = do
+      childState  <- extendScope $ restack [] state
+      resultState <- interpret ss childState
+      return $ restack ys $ setBinding x (VScope $ scopeId childState) resultState { scopeId = scopeId state }
+    namespace' state = return $ raiseError "Expected a block" state
+namespace xs state = return (raiseError "`Namespace` must be followed by a valid non-namespaced identifier" state, xs)
 
 print state@(State { stack = (x:xs) }) = do
   case x of
@@ -53,14 +98,13 @@ eq (x:y:xs) = Right $ VBool (x == y) : xs
 eq xs       = Left "Expected 2 values"
 
 and (x:y:xs)
-  | asBool x && asBool y = Right $ y : xs
-  | otherwise            = Right $ VBool False : xs
-and xs                   = Left "Expected 2 values"
+  | asBool x  = Right $ y : xs
+  | otherwise = Right $ x : xs
+and xs        = Left "Expected 2 values"
 
 or (x:y:xs)
   | asBool x  = Right $ x : xs
-  | asBool y  = Right $ y : xs
-  | otherwise = Right $ VBool False : xs
+  | otherwise = Right $ y : xs
 or xs         = Left "Expected 2 values"
 
 not (x:xs) = Right $ VBool (Prelude.not $ asBool x) : xs
@@ -128,8 +172,9 @@ concat (VList x : VList y : xs) = Right $ VList (x ++ y) : xs
 concat (VStr  x : VStr  y : xs) = Right $ VStr  (x ++ y) : xs
 concat xs                       = Left "Expected 2 lists or 2 strings"
 
-toString (x : xs) = Right $ VStr (show x) : xs
-toString xs       = Left "Expected 1 value"
+toString s@(VStr x : xs) = Right s
+toString (x : xs)        = Right $ VStr (show x) : xs
+toString xs              = Left "Expected 1 value"
 
 typeOf (x : xs) = Right $ VStr (typeName x) : xs
 typeOf xs       = Left "Expected 1 value"

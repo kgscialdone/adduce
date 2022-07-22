@@ -5,7 +5,7 @@ module Adduce.Utils where
 import Control.Monad (foldM)
 import Data.Char (isSpace)
 import Data.List (dropWhileEnd, isPrefixOf)
-import Data.Map as Map (Map, empty, insert, member, (!))
+import Data.Map as Map (Map, insert, member, (!))
 import Data.Bifunctor (Bifunctor, bimap)
 
 -- | Return the left-hand `Maybe` if it is a `Just`, otherwise return the right-hand `Maybe`.
@@ -48,7 +48,7 @@ split sub str = split' sub str [] []
 
 -- | Group a list of tuples into a map of lists, grouping by the first of each tuple.
 keyedPartition :: Ord k => [(k,v)] -> Map k [v]
-keyedPartition = keyedPartition' Map.empty where
+keyedPartition = keyedPartition' mempty where
   keyedPartition' m ((k,v):xs)
     | Map.member k m = keyedPartition' (Map.insert k (v : m ! k) m) xs
     | otherwise      = keyedPartition' (Map.insert k [v] m) xs

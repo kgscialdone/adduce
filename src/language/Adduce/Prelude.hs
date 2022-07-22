@@ -3,11 +3,10 @@
 -- | Language builtins and prelude file
 module Adduce.Prelude where
 
-import Control.Exception (throw)
 import Data.Maybe (fromMaybe)
 import Data.Interned (intern)
 
-import Adduce.Types.State
+import Adduce.Types
 import Adduce.Interpreter
 import qualified Adduce.Builtins as B
 
@@ -22,8 +21,8 @@ loadPrelude debug = do
 -- | Default program environment.
 --   This is seperate from the external prelude file, which will be loaded into it later.
 defaultState = newState >>= \s -> return $
-  withErrorH (\e st -> return $ throw $ AdduceError e) $
-  foldr (\(k,v) s -> setBinding k v s) s $ map (\(a,b) -> (intern a, b)) bindings
+  flip (foldr (\(k,v) s -> setBinding k v s)) (map (\(a,b) -> (intern a, b)) bindings) $
+  flip (foldr (\(k,v) s -> setMacro   k v s)) (map (\(a,b) -> (intern a, b)) macros) $ s
   where
     bindings = [
       ("Print", VIOFn B.print),
@@ -56,6 +55,13 @@ defaultState = newState >>= \s -> return $
 
       ("Raise", VIOFn B.raise),
       ("Catch", VIOFn B.catch)
+      ]
+
+    macros = [
+      ("Let", B.lett),
+      ("Def", B.deff),
+      ("Alias", B.alias),
+      ("Namespace", B.namespace)
       ]
 
 -- | Debug bindings, only available with @--debug@ flag.

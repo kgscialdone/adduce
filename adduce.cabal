@@ -21,8 +21,7 @@ library
     exposed-modules:
         Adduce.Interpreter
         Adduce.Prelude
-        Adduce.Types.State
-        Adduce.Types.Token
+        Adduce.Types
         Adduce.Utils
     other-modules:
         Adduce.Builtins

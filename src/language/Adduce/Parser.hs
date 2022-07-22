@@ -8,9 +8,8 @@ import Data.List (groupBy, partition, isInfixOf)
 import Data.Maybe (isJust, fromJust, mapMaybe)
 import Data.Either (isLeft, fromLeft, fromRight)
 import Data.Interned (intern, unintern)
-import Data.Interned.String (InternedString)
 
-import Adduce.Types.Token
+import Adduce.Types
 import Adduce.Utils
 
 -- | Parse an Adduce program from a string, returning a list of `Statement`s.
@@ -114,18 +113,6 @@ parse = parse' &. groupBy groupStatements &. map (filter filterEnds) &. filter (
         (1,")") -> Block (parse $ map (Right . snd) $ init inner) : parse'' (map snd rest)
         _       -> Invalid "Unmatched (" : parse'' (map snd rest)
 
-    parse'' [f]        | f == "Alias" = [Invalid $ "`"++f++"` must be followed by 2 valid identifiers, the first of which must be non-namespaced"]
-    parse'' [f,_]      | f == "Alias" = [Invalid $ "`"++f++"` must be followed by 2 valid identifiers, the first of which must be non-namespaced"]
-    parse'' (f:a:b:ts) | f == "Alias" = let pt = parse'' [a,b] in case pt of
-      is@[Ident _, Ident _]   -> Form f is : parse'' ts
-      is@[Ident _, NSIdent _] -> Form f is : parse'' ts
-      _                       -> [Invalid $ "`"++f++"` must be followed by 2 valid identifiers, the first of which must be non-namespaced"]
-
-    parse'' [f]      | f `elem` ["Let","Def","Namespace"] = [Invalid $ "`"++f++"` must be followed by a valid non-namespaced identifier"]
-    parse'' (f:t:ts) | f `elem` ["Let","Def","Namespace"] = let pt = parse'' [t] in case pt of
-      is@[Ident _] -> Form f is : parse'' ts
-      _            -> [Invalid $ "`"++f++"` must be followed by a valid non-namespaced identifier"]
-
     parse'' (t:ts)
       | isJust (readMaybe t :: Maybe Integer) = IntLit (read t :: Integer) : parse'' ts
       | isJust (readMaybe t :: Maybe Double)  = FltLit (read t :: Double)  : parse'' ts
@@ -147,33 +134,17 @@ parse = parse' &. groupBy groupStatements &. map (filter filterEnds) &. filter (
 verify :: Statement -> Maybe String
 verify = verify' True
   where
-    verify' False (Form "Alias" _ : _)     = Just "`Alias` cannot appear in the middle of a statement"
-    verify' False (Form "Let" _ : _)       = Just "`Let` cannot appear in the middle of a statement"
-    verify' False (Form "Def" _ : _)       = Just "`Def` cannot appear in the middle of a statement"
-    verify' False (Form "Namespace" _ : _) = Just "`Namespace` cannot appear in the middle of a statement"
+    headOnly = map intern ["Let","Def","Alias","Namespace"]
 
-    verify' True (Form "Alias" [Ident x,_] : xs)
-      | x `elem` reservedNames = Just $ "Cannot redefine the reserved name `" ++ unintern x ++ "`"
-      | otherwise              = verify' False xs
-    verify' True (Form "Let" [Ident x] : xs)
-      | x `elem` reservedNames = Just $ "Cannot redefine the reserved name `" ++ unintern x ++ "`"
-      | otherwise              = verify' False xs
-    verify' True (Form "Def" [Ident x] : xs)
-      | x `elem` reservedNames = Just $ "Cannot redefine the reserved name `" ++ unintern x ++ "`"
-      | otherwise              = verify' False xs
-    verify' True (Form "Namespace" [Ident x] : xs)
-      | x `elem` reservedNames = Just $ "Cannot redefine the reserved name `" ++ unintern x ++ "`"
-      | otherwise              = verify' False xs
+    verify' False (Ident x : xs)
+      | x `elem` headOnly = Just $ "`" ++ unintern x ++ "` cannot appear in the middle of a statement"
+      | otherwise         = verify' False xs
 
     verify' _ (Block ss : xs) = let res = filter isJust $ map verify ss in case length res of
-      0 -> Nothing
+      0 -> verify' False xs
       _ -> Just $ unlines $ map fromJust res
 
     verify' _ (Invalid x : xs) = Just x
     verify' _ (x:xs)           = verify' False xs
     verify' _ []               = Nothing
-
--- | List of reserved identifier names that cannot be used by Let/Def/Alias
-reservedNames :: [InternedString]
-reservedNames = map intern ["Let","Def","Alias","Namespace","Catch","Raise"]
 
