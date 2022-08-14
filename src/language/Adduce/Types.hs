@@ -113,6 +113,7 @@ data Value = VInt Integer
            | VIOFn (State -> IO State)
            | VAlias BindingKey
            | VScope ScopeId
+           | VToken Token
 
 instance Show Value where
   show (VInt x)       = show x
@@ -125,6 +126,7 @@ instance Show Value where
   show (VIOFn _)      = "<iofn>"
   show (VAlias (s,n)) = "<alias " ++ show s ++ ":" ++ unintern n ++ ">"
   show (VScope s)     = "<namespace " ++ show s ++ ">"
+  show (VToken t)     = "<token " ++ show t ++ ">"
 
 instance Eq Value where
   VInt x  == VInt y  = x == y
@@ -164,7 +166,7 @@ data Token = Ident InternedString
            | StrLit String
            | StmtEnd
            | Invalid String
-           | Thunk Value
+           | Thunk String Value
 
 instance Show Token where
   show (Ident s)   = unintern s
@@ -175,5 +177,5 @@ instance Show Token where
   show (StrLit x)  = show x
   show StmtEnd     = "."
   show (Invalid s) = "{Syntax error: " ++ s ++ "}"
-  show (Thunk x)   = "{Macro thunk: " ++ show x ++ "}"
+  show (Thunk s x) = "{Macro thunk: " ++ s ++ "}"
 

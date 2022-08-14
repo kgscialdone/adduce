@@ -5,7 +5,8 @@ module Adduce.Builtins where
 
 import Control.Monad (foldM)
 import Data.Tuple (swap)
-import Data.Interned (unintern)
+import Data.Either (isRight, fromRight)
+import Data.Interned (intern, unintern)
 
 import Adduce.Types
 import Adduce.Interpreter
@@ -13,7 +14,7 @@ import Adduce.Interpreter
 lett :: Macro
 lett (Ident x : xs) state
   | x `elem` reservedNames = return (raiseError ("Cannot redefine reserved name `" ++ unintern x ++ "`") state, xs)
-  | otherwise              = return (state, (Thunk $ VIOFn lett') : xs)
+  | otherwise              = return (state, (Thunk "Let" $ VIOFn lett') : xs)
   where
     lett' state@State { stack = (y : ys) } = return $ restack ys $ setBinding x y state
     lett' state                            = return $ raiseError "Expected 1 value" state
@@ -22,7 +23,7 @@ lett xs state = return (raiseError "`Let` must be followed by a valid non-namesp
 deff :: Macro
 deff (Ident x : xs) state
   | x `elem` reservedNames = return (raiseError ("Cannot redefine reserved name `" ++ unintern x ++ "`") state, xs)
-  | otherwise              = return (state, (Thunk $ VIOFn deff') : xs)
+  | otherwise              = return (state, (Thunk "Def" $ VIOFn deff') : xs)
   where
     deff' state@State { stack = (b@(VBlock _ _) : ys) } = return $ restack ys $ setBinding x (VIOFn (\s -> interpretBlock b s)) state
     deff' state                                         = return $ raiseError "Expected a block" state
@@ -44,7 +45,7 @@ alias xs state = return (raiseError "`Alias` must be followed by 2 valid identif
 namespace :: Macro
 namespace (Ident x : xs) state
   | x `elem` reservedNames = return (raiseError ("Cannot redefine reserved name `" ++ unintern x ++ "`") state, xs)
-  | otherwise              = return (state, (Thunk $ VIOFn namespace') : xs)
+  | otherwise              = return (state, (Thunk "Namespace" $ VIOFn namespace') : xs)
   where
     namespace' state@State { stack = (b@(VBlock ss be) : ys) } = do
       childState  <- extendScope $ restack [] state
@@ -52,6 +53,39 @@ namespace (Ident x : xs) state
       return $ restack ys $ setBinding x (VScope $ scopeId childState) resultState { scopeId = scopeId state }
     namespace' state = return $ raiseError "Expected a block" state
 namespace xs state = return (raiseError "`Namespace` must be followed by a valid non-namespaced identifier" state, xs)
+
+macro :: Macro
+macro (Ident x : xs) state
+  | x `elem` reservedNames = return (raiseError ("Cannot redefine reserved name `" ++ unintern x ++ "`") state, xs)
+  | otherwise              = return (state, (Thunk "Macro" $ VIOFn macro') : xs)
+  where
+    macro' state@State { stack = (VBlock ss be : ys) } = return $ restack ys $ setMacro x (\stmt state -> do
+      newState <- extendScope state { scopeId = be }
+      newState <- interpret ss $ restack (map VToken stmt) $ bindQuoters newState
+      case raised newState of
+        Just err -> return (raiseError err state, [])
+        Nothing  -> do
+          newStmt <- return $ map extractToken (stack newState)
+          case Prelude.and (map isRight newStmt) of
+            True  -> return (state, map (fromRight $ Invalid "Unreachable {1}") newStmt)
+            False -> return (raiseError "Macro execution left non-tokens on stack" state, [])) state
+
+    bindQuoters = setMacro   (intern "Quote")   quote
+                . setBinding (intern "Unquote") (VIOFn unquote)
+                . setBinding (intern "Requote") (VFunc requote)
+
+    extractToken (VToken t) = Right t
+    extractToken v          = Left v
+
+quote :: Macro
+quote (x : xs) state = return (state, (Thunk "Quote" $ VToken x) : xs)
+quote [] state       = return (raiseError "Can't quote nothing" state, [])
+
+unquote state@State { stack = (VToken y : ys) } = interpret [[y]] $ restack ys state
+unquote state                                   = return $ raiseError "Can't unquote a non-token value" state
+
+requote (x : xs) = Right $ VToken (Thunk "Requote" x) : xs
+requote []       = Left "Can't requote nothing"
 
 print state@(State { stack = (x:xs) }) = do
   case x of

@@ -134,7 +134,7 @@ parse = parse' &. groupBy groupStatements &. map (filter filterEnds) &. filter (
 verify :: Statement -> Maybe String
 verify = verify' True
   where
-    headOnly = map intern ["Let","Def","Alias","Namespace"]
+    headOnly = map intern ["Let","Def","Alias","Namespace","Macro"]
 
     verify' False (Ident x : xs)
       | x `elem` headOnly = Just $ "`" ++ unintern x ++ "` cannot appear in the middle of a statement"

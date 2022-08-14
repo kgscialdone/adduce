@@ -61,7 +61,8 @@ defaultState = newState >>= \s -> return $
       ("Let", B.lett),
       ("Def", B.deff),
       ("Alias", B.alias),
-      ("Namespace", B.namespace)
+      ("Namespace", B.namespace),
+      ("Macro", B.macro)
       ]
 
 -- | Debug bindings, only available with @--debug@ flag.

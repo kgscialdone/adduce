@@ -56,7 +56,7 @@ interpret statements state =
           resolveIdent = maybe (return $ raiseError ("Unknown symbol `" ++ unintern x ++ "`") state) pushResolved $ getDesuffixed x state
         interpret'' (i@(NSIdent _) : xs) = interpret' xs =<< resolveIdent where
           resolveIdent = either (return . flip raiseError state) pushResolved $ getNamespaced i state
-        interpret'' (Thunk x : xs)       = interpret' xs =<< pushResolved x
+        interpret'' (Thunk _ x : xs)     = interpret' xs =<< pushResolved x
 
         interpret'' (x:xs) = error $ "Internal error: Unhandled token " ++ show x
         interpret'' []     = return state
@@ -83,7 +83,7 @@ expandMacros acc [] state       = return (state, acc)
 
 -- | List of reserved identifier names that cannot be redefined
 reservedNames :: [InternedString]
-reservedNames = map intern ["Let","Def","Alias","Namespace","Catch","Raise"]
+reservedNames = map intern ["Let","Def","Alias","Namespace","Macro","Catch","Raise"]
 
 
 -- | Search a `State` for a given binding, performing desuffixing if needed, by applying the given search function.
