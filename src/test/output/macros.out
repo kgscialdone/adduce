@@ -1,0 +1,7 @@
+<token 42>
+<token "Hello, world!">
+<token (Print 42)>
+42
+42
+Hello, world!
+42

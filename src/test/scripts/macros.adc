@@ -1,0 +1,19 @@
+
+Macro PrToken (Print).
+
+PrToken 42.
+PrToken "Hello, world!".
+PrToken (Print 42).
+
+Macro DumbNop (Requote Unquote).
+Print DumbNop 42.
+
+Macro DumberNop (Requote Unquote Quote 42).
+Print DumberNop.
+
+Macro PushHello (Quote "Hello, world!").
+Print PushHello.
+
+Macro ThunkBlock (Quote Do, Quote (Print 42)).
+ThunkBlock.
+
